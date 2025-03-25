@@ -74,7 +74,11 @@ int main(int argc, char const *argv[])
     printf("\nTablero:\n");
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
-            printf("%d ", game->board[y * width + x]);
+            printf("| %d ", game->board[y * width + x]);
+        }
+        printf("|\n");
+        for (int x = 0; x < width; x++) {
+            printf("----");
         }
         printf("\n");
     }
