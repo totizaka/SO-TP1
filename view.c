@@ -10,7 +10,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#define SHM_NAME "/game_state"
+#define SHM_NAME_STATE "/game_state"
+#define SHM_NAME_SYNC "/game_sync"
 
 typedef struct {
     char player_name[16];   // Nombre del jugador
@@ -31,6 +32,16 @@ typedef struct {
     int board[];              // Tablero (arreglo flexible al final)
 } GameMap;
 
+typedef struct {
+    sem_t view_pending; // Se usa para indicarle a la vista que hay cambios por imprimir
+    sem_t view_done; // Se usa para indicarle al master que la vista terminó de imprimir
+    sem_t master_mutex; // Mutex para evitar inanición del master al acceder al estado
+    sem_t game_state_mutex; // Mutex para el estado del juego
+    sem_t game_player_mutex; // Mutex para la siguiente variable
+    unsigned int players_reading; // Cantidad de jugadores leyendo el estado
+} Semaphores;
+    
+
 int main(int argc, char const *argv[])
 {
     printf("hola view");
@@ -47,42 +58,63 @@ int main(int argc, char const *argv[])
     size_t shm_size = sizeof(GameMap) + (width * height * sizeof(int));
 
     // Abrir la memoria compartida (sin O_CREAT porque ya esta creada)
-    int fd = shm_open("/game_state", O_RDONLY, 0666);
-    if (fd == -1) {
-        perror("shm_open");
-        exit(1);
+    int shm_state = shm_open("/game_state", O_RDONLY, 0666);
+    if (shm_state == -1) {
+        perror("shm_state open fail");
+        exit(EXIT_FAILURE);
+    }
+
+    int shm_sync = shm_open("/game_sync", O_RDWR, 0666);
+    if (shm_sync == -1) {
+        perror("shm_sync open fail");
+        exit(EXIT_FAILURE);
     }
 
     // Mapear la memoria compartida
-    GameMap *game = mmap(NULL, shm_size, PROT_READ, MAP_SHARED, fd, 0);
+    GameMap *game = mmap(NULL, shm_size, PROT_READ, MAP_SHARED, shm_state, 0);
     if (game == MAP_FAILED) {
-        perror("mmap");
-        exit(1);
+        perror("shm_state fail to mmap");
+        exit(EXIT_FAILURE);
     }
 
-    // Imprimir
-    printf("Tablero de %dx%d\n", game->width, game->height);
-    printf("Jugadores: %d\n", game->num_players);
-    
-    for (int i = 0; i < game->num_players; i++) {
-        printf("Jugador %d: %s - Puntos: %d - Posición: (%d, %d)\n",
-               i, game->players[i].player_name, game->players[i].points,
-               game->players[i].x, game->players[i].y);
+    Semaphores *sems = mmap(NULL, sizeof(Semaphores), PROT_READ | PROT_WRITE, MAP_SHARED, shm_sync, 0);
+    if (sems == MAP_FAILED) {
+        perror("shm_sync fail to mmap");
+        exit(EXIT_FAILURE);
     }
 
-    // Tablero
-    printf("\nTablero:\n");
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            printf("| %d ", game->board[y * width + x]);
+    while(1){
+        //Esperamos
+        sem_wait(&sems->view_pending);
+
+        // Imprimir
+        printf("Tablero de %dx%d\n", game->width, game->height);
+        printf("Jugadores: %d\n", game->num_players);
+        
+        for (int i = 0; i < game->num_players; i++) {
+            printf("Jugador %d: %s - Puntos: %d - Posición: (%d, %d)\n",
+                i, game->players[i].player_name, game->players[i].points,
+                game->players[i].x, game->players[i].y);
         }
-        printf("|\n");
-        for (int x = 0; x < width; x++) {
-            printf("----");
+
+        // Tablero
+        printf("\nTablero:\n");
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                printf("| %d ", game->board[y * width + x]);
+            }
+            printf("|\n");
+            for (int x = 0; x < width; x++) {
+                printf("----");
+            }
+            printf("\n");
         }
-        printf("\n");
+
+        //Seguimos
+        sem_post(&sems->view_done);
     }
 
-    close(fd);
+    close(shm_state);
+    close(shm_sync);
     return 0;
 }
