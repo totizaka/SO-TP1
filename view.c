@@ -87,7 +87,9 @@ int main(int argc, char const *argv[])
         //Esperamos
         sem_wait(&sems->view_pending);
 
-        // Imprimir
+        //IMPRESION
+
+        // Imprimir estado
         printf("Tablero de %dx%d\n", game->width, game->height);
         printf("Jugadores: %d\n", game->num_players);
         
@@ -97,7 +99,7 @@ int main(int argc, char const *argv[])
                 game->players[i].x, game->players[i].y);
         }
 
-        // Tablero
+        //Imprimir Tablero
         printf("\nTablero:\n");
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {

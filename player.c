@@ -85,9 +85,78 @@ int main(int argc, char const *argv[])
     }
 
     
+    pid_t pid= getpid();
+    srand(pid);//Utilizamos el pid para inicializar la semilla
 
+    // Buscar al jugador actual
+    Player *player = NULL;
+    for (int i = 0; i < game->num_players; i++) {
+        if (game->players[i].pid == pid) {
+            player = &game->players[i];
+            break;
+        }
+    }
+
+
+    if (player == NULL) {
+        fprintf(stderr, "Jugador no encontrado en la memoria compartida\n");
+        return 1;
+    }
+
+
+    move_randomly(player, game);
+
+
+    
+    close(shm_state);
+    close(shm_sync);
     return 0;
 }
+
+
+void  move_random(Player *player, GameMap *game){
+        // Direcciones posibles (x, y): arriba, abajo, izquierda, derecha, y 4 diagonales
+        int directions[8][2] = {
+            {0, -1}, // Arriba
+            {0, 1},  // Abajo
+            {-1, 0}, // Izquierda
+            {1, 0},  // Derecha
+            {-1, -1}, // Arriba izquierda
+            {-1, 1},  // Abajo izquierda
+            {1, -1},  // Arriba derecha
+            {1, 1}    // Abajo derecha
+        };
+
+        // Elegir una dirección aleatoria
+        int move = rand() % 8;
+        int new_x = player->x + directions[move][0];
+        int new_y = player->y + directions[move][1];
+
+        // Verificar que el movimiento sea válido
+        if (new_x >= 0 && new_x < game->width && new_y >= 0 && new_y < game->height) {
+            // Verificar si la casilla está ocupada
+            bool valid_move = true;
+            for (int i = 0; i < game->num_players; i++) {
+                if (game->players[i].x == new_x && game->players[i].y == new_y) {
+                    valid_move = false;
+                    break;
+                } 
+            }
+
+            // Si el movimiento es válido, realizar el movimiento
+            if (valid_move) {
+                player->x = new_x;
+                player->y = new_y;
+                printf("Jugador %s se movió a la posición (%d, %d)\n", player->player_name, player->x, player->y);
+            } else {
+                printf("Movimiento inválido: La casilla (%d, %d) ya está ocupada.\n", new_x, new_y);
+                player->invalid_moves++;
+            }
+        } else {
+            printf("Movimiento fuera de los límites del tablero.\n");
+            player->invalid_moves++;
+        }
+    }
 
 
 
