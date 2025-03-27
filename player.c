@@ -14,6 +14,10 @@
 #define SHM_NAME_STATE "/game_state"
 #define SHM_NAME_SYNC "/game_sync"
 
+// Desplazamientos para las 8 direcciones posibles
+const int dx[] = {0, 1, 1, 1, 0, -1, -1, -1};
+const int dy[] = {-1, -1, 0, 1, 1, 1, 0, -1};
+
 typedef struct {
     char player_name[16];   // Nombre del jugador
     unsigned int points;     // Puntaje
@@ -116,8 +120,25 @@ int main(int argc, char const *argv[])
             break;
         }
 
+        // Determinar el índice del jugador basado en su PID
+        int player_index = -1;
+        pid_t pid = getpid();
+        for (int i = 0; i < game->num_players; i++) {
+            if (game->players[i].pid == pid) {
+                player_index = i;
+                break;
+            }
+        }
+
+        if (player_index == -1) {
+            fprintf(stderr, "Error: No se encontró el jugador con PID %d en la lista de jugadores.\n", pid);
+            sem_post(&sems->game_state_mutex);
+            sem_post(&sems->game_player_mutex);
+            break;
+        }
+
         // Obtener el jugador actual
-        Player *player = &game->players[0]; // Cambiar índice si hay múltiples jugadores
+        Player *player = &game->players[player_index];
 
         // Verificar si el jugador está bloqueado
         if (player->blocked) {
@@ -128,6 +149,23 @@ int main(int argc, char const *argv[])
 
         // Generar un movimiento aleatorio
         unsigned char movement = rand() % 8;
+
+        // int new_x = player->x + dx[movement];
+        // int new_y = player->y + dy[movement];
+
+        // // Validar el movimiento
+        // if (new_x >= 0 && new_x < game->width && new_y >= 0 && new_y < game->height &&
+        //     game->board[new_y * game->width + new_x] >= 1) {
+        //     // Movimiento válido, enviarlo al máster
+        //     if (write(STDOUT_FILENO, &movement, sizeof(movement)) == -1) {
+        //         perror("Error al escribir en el pipe");
+        //         sem_post(&sems->game_state_mutex);
+        //         sem_post(&sems->game_player_mutex);
+        //         break;
+        //     }
+        // } else {
+        //     // Movimiento inválido, ignorarlo
+        // }
 
         // Enviar el movimiento al máster
         if (write(STDOUT_FILENO, &movement, sizeof(movement)) == -1) {

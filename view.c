@@ -13,6 +13,20 @@
 #define SHM_NAME_STATE "/game_state"
 #define SHM_NAME_SYNC "/game_sync"
 
+// Códigos ANSI para colores
+const char *player_colors[] = {
+    "\033[31m", // Rojo
+    "\033[32m", // Verde
+    "\033[33m", // Amarillo
+    "\033[34m", // Azul
+    "\033[35m", // Magenta
+    "\033[36m", // Cian
+    "\033[91m", // Rojo claro
+    "\033[92m", // Verde claro
+    "\033[93m"  // Amarillo claro
+};
+#define RESET_COLOR "\033[0m"
+
 typedef struct {
     char player_name[16];   // Nombre del jugador
     unsigned int points;     // Puntaje
@@ -101,15 +115,28 @@ int main(int argc, char const *argv[])
                 game->players[i].x, game->players[i].y);
         }
 
-        //Imprimir Tablero
+        // Imprimir Tablero
         printf("\nTablero:\n");
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                printf("| %d ", game->board[y * width + x]);
+                int cell = game->board[y * width + x];
+                if (cell < 0) {
+                    // Celda capturada por un jugador
+                    int player_id = -cell; // Convertir a índice de jugador
+                    printf("| -%s%d%s ", player_colors[player_id % 9], player_id, RESET_COLOR);
+                } else if (cell == 0){
+                    printf("|  %s%d%s ", player_colors[0], 0, RESET_COLOR);
+                } else if (cell > 0) {
+                    // Celda con recompensa
+                    printf("| %2d ", cell);
+                } else {
+                    // Celda vacía
+                    printf("|    ");
+                }
             }
             printf("|\n");
             for (int x = 0; x < width; x++) {
-                printf("----");
+                printf("-----");
             }
             printf("\n");
         }
