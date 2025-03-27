@@ -45,7 +45,10 @@ typedef struct {
 
 int main(int argc, char const *argv[])
 {
-    printf("hola player");
+    
+    pid_t pid = getpid();
+    srand(pid);                                         //Utilizamos el pid para inicializar la semilla
+
 
     if (argc != 3) {
         fprintf(stderr, "Uso: %s <width> <height>\n", argv[0]);
@@ -68,6 +71,7 @@ int main(int argc, char const *argv[])
     int shm_sync = shm_open("/game_sync", O_RDWR, 0666);
     if (shm_sync == -1) {
         perror("shm_sync open fail");
+        close(shm_state);
         exit(EXIT_FAILURE);
     }
 
@@ -75,88 +79,81 @@ int main(int argc, char const *argv[])
     GameMap *game = mmap(NULL, shm_size, PROT_READ, MAP_SHARED, shm_state, 0);
     if (game == MAP_FAILED) {
         perror("shm_state fail to mmap");
+        close(shm_state);
+        close(shm_sync);
         exit(EXIT_FAILURE);
     }
 
     Semaphores *sems = mmap(NULL, sizeof(Semaphores), PROT_READ | PROT_WRITE, MAP_SHARED, shm_sync, 0);
     if (sems == MAP_FAILED) {
         perror("shm_sync fail to mmap");
+        munmap(game, shm_size);
+        close(shm_state);
+        close(shm_sync);
         exit(EXIT_FAILURE);
     }
 
-    
-    pid_t pid= getpid();
-    srand(pid);//Utilizamos el pid para inicializar la semilla
+    int player_pipe[2];
+    if (pipe(player_pipe) == -1) {
+        perror("Error creando el pipe");
+        munmap(game, shm_size);
+        munmap(sems, sizeof(Semaphores));
+        close(shm_state);
+        close(shm_sync);
+        exit(EXIT_FAILURE);
+    }
 
-    // Buscar al jugador actual
-    Player *player = NULL;
-    for (int i = 0; i < game->num_players; i++) {
-        if (game->players[i].pid == pid) {
-            player = &game->players[i];
+
+     // Bucle principal del jugador
+     while (1) {
+        sem_wait(&sems->game_player_mutex);
+        sem_wait(&sems->game_state_mutex);
+
+        // Verificar si el juego terminó
+        if (game->game_over) {
+            sem_post(&sems->game_state_mutex);
+            sem_post(&sems->game_player_mutex);
             break;
         }
+
+        // Obtener el jugador actual
+        Player *player = &game->players[0]; // Cambiar índice si hay múltiples jugadores
+
+        // Verificar si el jugador está bloqueado
+        if (player->blocked) {
+            sem_post(&sems->game_state_mutex);
+            sem_post(&sems->game_player_mutex);
+            break;
+        }
+
+        // Generar un movimiento aleatorio
+        unsigned char movement = rand() % 8;
+
+        // Enviar el movimiento al máster
+        if (write(STDOUT_FILENO, &movement, sizeof(movement)) == -1) {
+            perror("Error al escribir en el pipe");
+            sem_post(&sems->game_state_mutex);
+            sem_post(&sems->game_player_mutex);
+            break;
+        }
+
+        sem_post(&sems->game_state_mutex);
+        sem_post(&sems->game_player_mutex);
+
+        usleep(100000); // 100 ms
+
     }
-
-
-    if (player == NULL) {
-        fprintf(stderr, "Jugador no encontrado en la memoria compartida\n");
-        return 1;
-    }
-
-
-    move_randomly(player, game);
-
-
     
+
+    // Liberar recursos
+    munmap(game, shm_size);
+    munmap(sems, sizeof(Semaphores));
     close(shm_state);
     close(shm_sync);
+    close(player_pipe[0]);
+    close(player_pipe[1]);
     return 0;
 }
-
-
-void  move_random(Player *player, GameMap *game){
-        // Direcciones posibles (x, y): arriba, abajo, izquierda, derecha, y 4 diagonales
-        int directions[8][2] = {
-            {0, -1}, // Arriba
-            {0, 1},  // Abajo
-            {-1, 0}, // Izquierda
-            {1, 0},  // Derecha
-            {-1, -1}, // Arriba izquierda
-            {-1, 1},  // Abajo izquierda
-            {1, -1},  // Arriba derecha
-            {1, 1}    // Abajo derecha
-        };
-
-        // Elegir una dirección aleatoria
-        int move = rand() % 8;
-        int new_x = player->x + directions[move][0];
-        int new_y = player->y + directions[move][1];
-
-        // Verificar que el movimiento sea válido
-        if (new_x >= 0 && new_x < game->width && new_y >= 0 && new_y < game->height) {
-            // Verificar si la casilla está ocupada
-            bool valid_move = true;
-            for (int i = 0; i < game->num_players; i++) {
-                if (game->players[i].x == new_x && game->players[i].y == new_y) {
-                    valid_move = false;
-                    break;
-                } 
-            }
-
-            // Si el movimiento es válido, realizar el movimiento
-            if (valid_move) {
-                player->x = new_x;
-                player->y = new_y;
-                printf("Jugador %s se movió a la posición (%d, %d)\n", player->player_name, player->x, player->y);
-            } else {
-                printf("Movimiento inválido: La casilla (%d, %d) ya está ocupada.\n", new_x, new_y);
-                player->invalid_moves++;
-            }
-        } else {
-            printf("Movimiento fuera de los límites del tablero.\n");
-            player->invalid_moves++;
-        }
-    }
 
 
 

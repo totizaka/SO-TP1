@@ -74,16 +74,18 @@ int main(int argc, char const *argv[])
     GameMap *game = mmap(NULL, shm_size, PROT_READ, MAP_SHARED, shm_state, 0);
     if (game == MAP_FAILED) {
         perror("shm_state fail to mmap");
+        close(shm_state);
         exit(EXIT_FAILURE);
     }
 
     Semaphores *sems = mmap(NULL, sizeof(Semaphores), PROT_READ | PROT_WRITE, MAP_SHARED, shm_sync, 0);
     if (sems == MAP_FAILED) {
         perror("shm_sync fail to mmap");
+        close(shm_sync);
         exit(EXIT_FAILURE);
     }
 
-    while(1){
+    while(!game->game_over){
         //Esperamos
         sem_wait(&sems->view_pending);
 
@@ -116,6 +118,8 @@ int main(int argc, char const *argv[])
         sem_post(&sems->view_done);
     }
 
+    munmap(game, shm_size);
+    munmap(sems, sizeof(Semaphores));
     close(shm_state);
     close(shm_sync);
     return 0;
