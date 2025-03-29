@@ -58,8 +58,6 @@ typedef struct {
 
 int main(int argc, char const *argv[])
 {
-    printf("hola view");
-
     if (argc != 3) {
         fprintf(stderr, "Uso: %s <width> <height>\n", argv[0]);
         return 1;

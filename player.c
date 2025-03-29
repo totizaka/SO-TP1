@@ -165,7 +165,7 @@ int main(int argc, char const *argv[])
     
             // Liberar el semáforo del estado del juego
             sem_post(&sems->game_state_mutex);
-            continue;
+            break;
         }
     
         // Generar un movimiento aleatorio
@@ -197,6 +197,8 @@ int main(int argc, char const *argv[])
         sem_wait(&sems->master_mutex);
         sems->players_reading--;
         sem_post(&sems->master_mutex);
+
+        usleep(100000);
     }
     
 
