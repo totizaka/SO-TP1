@@ -328,13 +328,8 @@ int main(int argc, char *argv[]) {
         usleep(delay);
     }
 
-    // Imprimir resumen final del juego
-    printf("\n=== Resumen del juego ===\n");
-    int max_points = -1;
-    int winner_index = -1;
-    bool tie = false;
-    
-    for (int i = 0; i < num_players; i++) {
+ 
+    /*for (int i = 0; i < num_players; i++) {
         printf("Jugador %d (%s): %d puntos\n", i, game->players[i].player_name, game->players[i].points);
         if (game->players[i].points > max_points) {
             max_points = game->players[i].points;
@@ -343,8 +338,31 @@ int main(int argc, char *argv[]) {
         } else if (game->players[i].points == max_points) {
             tie = true; // Hay un empate
         }
-    }
+    }*/
     
+    unsigned int max_points = 0;
+    int winner_index = -1;
+    bool tie = false;
+    
+
+// Esperar a que los procesos hijo terminen
+for (int i = 0; i < num_players; i++) {
+    int status;
+    waitpid(game->players[i].pid, &status, 0);
+    if(i<1){
+           // Imprimir resumen final del juego
+    printf("\n=== Resumen del juego ===\n");
+    }
+    printf("Jugador %d (%s): %d puntos\n", i, game->players[i].player_name, game->players[i].points);
+    if (game->players[i].points > max_points) {
+        max_points = game->players[i].points;
+        winner_index = i;
+        tie = false; // Reiniciar el estado de empate
+    } else if (game->players[i].points == max_points) {
+        tie = true; // Hay un empate
+    }
+    printf("Jugador %d (%s) terminó con código de salida %d.\n", i, game->players[i].player_name, WEXITSTATUS(status));
+}
     if (tie && max_points > 0) {
         printf("¡Hay un empate entre los jugadores con %d puntos!\n", max_points);
     } else if (winner_index != -1) {
@@ -352,13 +370,6 @@ int main(int argc, char *argv[]) {
     } else {
         printf("No hay ganador.\n");
     }
-
-// Esperar a que los procesos hijo terminen
-for (int i = 0; i < num_players; i++) {
-    int status;
-    waitpid(game->players[i].pid, &status, 0);
-    printf("Jugador %d (%s) terminó con código de salida %d.\n", i, game->players[i].player_name, WEXITSTATUS(status));
-}
 
     // Liberar recursos
     cleanup_resources(game, sems, shm_state, shm_sync);
