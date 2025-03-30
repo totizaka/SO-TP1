@@ -1,3 +1,7 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -105,10 +109,10 @@ int main(int argc, char const *argv[])
 
         // Imprimir estado
         printf("Tablero de %dx%d\n", game->width, game->height);
-        printf("Jugadores: %d\n", game->num_players);
+        printf("Jugadores: %u\n", game->num_players);
         
         for (int i = 0; i < game->num_players; i++) {
-            printf("Jugador %d: %s - Puntos: %d - Posición: (%d, %d)\n",
+            printf("Jugador %d: %s - Puntos: %u - Posición: (%hu, %hu)\n",
                 i, game->players[i].player_name, game->players[i].points,
                 game->players[i].x, game->players[i].y);
         }
@@ -124,13 +128,10 @@ int main(int argc, char const *argv[])
                     printf("| -%s%d%s ", player_colors[player_id % 9], player_id, RESET_COLOR);
                 } else if (cell == 0){
                     printf("|  %s%d%s ", player_colors[0], 0, RESET_COLOR);
-                } else if (cell > 0) {
+                } else  {
                     // Celda con recompensa
                     printf("| %2d ", cell);
-                } else {
-                    // Celda vacía
-                    printf("|    ");
-                }
+                } 
             }
             printf("|\n");
             for (int x = 0; x < width; x++) {

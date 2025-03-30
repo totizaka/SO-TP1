@@ -1,3 +1,7 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -40,9 +44,9 @@ typedef struct {
 typedef struct {
     sem_t view_pending; // Se usa para indicarle a la vista que hay cambios por imprimir
     sem_t view_done; // Se usa para indicarle al master que la vista terminó de imprimir
-    sem_t master_mutex; // Mutex para evitar inanición del master al acceder al estado
-    sem_t game_state_mutex; // Mutex para el estado del juego
-    sem_t game_player_mutex; // Mutex para la siguiente variable
+    sem_t master_mutex; // Mutex para evitar inanición del master al acceder al estado <-- jugadores con master
+    sem_t game_state_mutex; // Mutex para el estado del juego <-- jugadores con master
+    sem_t game_player_mutex; // Mutex para la siguiente variable <-- acceder a la variable de a un jugador
     unsigned int players_reading; // Cantidad de jugadores leyendo el estado
 } Semaphores;
 

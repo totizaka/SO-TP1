@@ -1,3 +1,7 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -196,6 +200,8 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    int * m= malloc(sizeof(int)); //para probar leaks con valgrind
+   
     // Inicializar semáforos
     sem_init(&sems->view_pending, 1, 0);
     sem_init(&sems->view_done, 1, 1);
@@ -353,7 +359,7 @@ for (int i = 0; i < num_players; i++) {
            // Imprimir resumen final del juego
     printf("\n=== Resumen del juego ===\n");
     }
-    printf("Jugador %d (%s): %d puntos\n", i, game->players[i].player_name, game->players[i].points);
+    printf("Jugador %d (%s): %u puntos\n", i, game->players[i].player_name, game->players[i].points);
     if (game->players[i].points > max_points) {
         max_points = game->players[i].points;
         winner_index = i;
@@ -364,9 +370,9 @@ for (int i = 0; i < num_players; i++) {
     printf("Jugador %d (%s) terminó con código de salida %d.\n", i, game->players[i].player_name, WEXITSTATUS(status));
 }
     if (tie && max_points > 0) {
-        printf("¡Hay un empate entre los jugadores con %d puntos!\n", max_points);
+        printf("¡Hay un empate entre los jugadores con %u puntos!\n", max_points);
     } else if (winner_index != -1) {
-        printf("¡El ganador es el Jugador %d (%s) con %d puntos!\n", winner_index, game->players[winner_index].player_name, max_points);
+        printf("¡El ganador es el Jugador %d (%s) con %u puntos!\n", winner_index, game->players[winner_index].player_name, max_points);
     } else {
         printf("No hay ganador.\n");
     }
