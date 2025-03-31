@@ -241,7 +241,7 @@ int main(int argc, char *argv[]) {
         game->players[i].player_name[sizeof(game->players[i].player_name) - 1] = '\0';
 
         // Marcar la celda inicial del jugador con su índice
-        game->board[y * width + x] = i;
+        game->board[y * width + x] = -i;
     }
 
     // Crear procesos para la vista y los jugadores
@@ -353,11 +353,12 @@ int main(int argc, char *argv[]) {
                         for (j = 0; j < 8; j++){
                             if(validate_move(game, i, j)){
                                 valido=1;
-                                break; // Si hay un movimiento válido, salir de la función
+                                break; // Si hay un movimiento válido, salir del for
                             }
                         }
                         if(!valido){
                             game->players[i].blocked = true; // Bloquear al jugador si no hay movimientos válidos
+                            printf("Bloqueo del jugador %d (%s)\n", i, game->players[i].player_name);
                         }
                             
                     }
@@ -373,7 +374,7 @@ int main(int argc, char *argv[]) {
         sem_wait(&sems->view_done);
 
         // Respetar el delay configurado
-        usleep(delay);
+        usleep(delay+1000000);
     }
 
  
