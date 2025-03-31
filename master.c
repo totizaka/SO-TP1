@@ -52,6 +52,9 @@ typedef struct {
     unsigned int players_reading;
 } Semaphores;
 
+int dx[] = {0, 1, 1, 1, 0, -1, -1, -1};
+int dy[] = {-1, -1, 0, 1, 1, 1, 0, -1};
+
 void print_usage(const char *prog_name) {
     fprintf(stderr, "Uso: %s [-w width] [-h height] [-d delay] [-t timeout] [-s seed] [-v view] -p player1 [player2 ...]\n", prog_name);
     exit(EXIT_FAILURE);
@@ -70,8 +73,8 @@ void cleanup_resources(GameMap *game, Semaphores *sems, int shm_state, int shm_s
 
 int validate_move(GameMap *game, int player_index, unsigned char move) {
     // Direcciones de movimiento (arriba, arriba-derecha, derecha, abajo-derecha, abajo, abajo-izquierda, izquierda, arriba-izquierda)
-    int dx[] = {0, 1, 1, 1, 0, -1, -1, -1};
-    int dy[] = {-1, -1, 0, 1, 1, 1, 0, -1};
+    // int dx[] = {0, 1, 1, 1, 0, -1, -1, -1};
+    // int dy[] = {-1, -1, 0, 1, 1, 1, 0, -1};
 
     Player *player = &game->players[player_index];
     int new_x = player->x + dx[move];
@@ -92,8 +95,8 @@ int validate_move(GameMap *game, int player_index, unsigned char move) {
 }
 
 void apply_move(GameMap *game, int player_index, unsigned char move) {
-    int dx[] = {0, 1, 1, 1, 0, -1, -1, -1};
-    int dy[] = {-1, -1, 0, 1, 1, 1, 0, -1};
+    // int dx[] = {0, 1, 1, 1, 0, -1, -1, -1};
+    // int dy[] = {-1, -1, 0, 1, 1, 1, 0, -1};
 
     Player *player = &game->players[player_index];
     int new_x = player->x + dx[move];
@@ -108,6 +111,16 @@ void apply_move(GameMap *game, int player_index, unsigned char move) {
     player->x = new_x;
     player->y = new_y;
     player->valid_moves++;
+
+    // int i=0;
+
+    // for (i = 0; i < 8; i++){
+    //     if(validate_move(game, player_index, i)){
+    //        return; // Si hay un movimiento válido, salir de la función
+    //     }
+    // }
+    // player[player_index].blocked = true; // Bloquear al jugador si no hay movimientos válidos
+
 }
 
 int main(int argc, char *argv[]) {
@@ -200,7 +213,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    int * m= malloc(sizeof(int)); //para probar leaks con valgrind
+    // int * m= malloc(sizeof(int)); //para probar leaks con valgrind
    
     // Inicializar semáforos
     sem_init(&sems->view_pending, 1, 0);
@@ -307,10 +320,24 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < num_players; i++) {
             if (FD_ISSET(player_pipes[i][0], &read_fds)) {
                 unsigned char move;
-                int bytes_read = read(player_pipes[i][0], &move, sizeof(move));
-                if (bytes_read == 0) {
+                int bytes_read;
+
+                // Proteger el acceso al pipe con game_player_mutex
+                sem_wait(&sems->game_player_mutex);
+                bytes_read = read(player_pipes[i][0], &move, sizeof(move));
+                sem_post(&sems->game_player_mutex);
+
+                if (bytes_read == 0) {                          //preguntar
                     // Jugador bloqueado (EOF)
+                    sem_wait(&sems->game_state_mutex);
                     game->players[i].blocked = true;
+                    printf("lo bloquie\n");
+                    sem_post(&sems->game_state_mutex);
+
+                    // Actualizar players_reading
+                    sem_wait(&sems->master_mutex);
+                    sems->players_reading--;
+                    sem_post(&sems->master_mutex);
                 } else if (bytes_read > 0) {
                     sem_wait(&sems->game_state_mutex);
                     if (validate_move(game, i, move)) {
@@ -318,6 +345,21 @@ int main(int argc, char *argv[]) {
                         start_time = time(NULL); // Reiniciar timeout
                     } else {
                         game->players[i].invalid_moves++;
+                        printf("Cantidad de movimientos inválidos del jugador %d (%s): %u\n", i, game->players[i].player_name, game->players[i].invalid_moves);
+                        
+                        int j=0;
+                        int valido=0;
+
+                        for (j = 0; j < 8; j++){
+                            if(validate_move(game, i, j)){
+                                valido=1;
+                                break; // Si hay un movimiento válido, salir de la función
+                            }
+                        }
+                        if(!valido){
+                            game->players[i].blocked = true; // Bloquear al jugador si no hay movimientos válidos
+                        }
+                            
                     }
                     sem_post(&sems->game_state_mutex);
                 }
