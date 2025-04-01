@@ -189,7 +189,16 @@ int main(int argc, char const *argv[])
             perror("Error al escribir en el pipe");
             break;
         }
-        usleep(10000);
+    
+        // Liberar el semáforo del jugador
+        sem_post(&sems->game_player_mutex);
+    
+        // Decrementar el contador de jugadores leyendo
+        sem_wait(&sems->master_mutex);
+        sems->players_reading--;
+        sem_post(&sems->master_mutex);
+
+       usleep(100000);
     }
     
 
