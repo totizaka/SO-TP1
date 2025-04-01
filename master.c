@@ -52,6 +52,7 @@ typedef struct {
     unsigned int players_reading;
 } Semaphores;
 
+int cabeza = 10; // Carácter que representa la cabeza del jugador
 
 // Direcciones de movimiento (arriba, arriba-derecha, derecha, abajo-derecha, abajo, abajo-izquierda, izquierda, arriba-izquierda)
 int dx[] = {0, 1, 1, 1, 0, -1, -1, -1};
@@ -99,9 +100,17 @@ void apply_move(GameMap *game, int player_index, unsigned char move) {
     int new_x = player->x + dx[move];
     int new_y = player->y + dy[move];
 
+    //Actualizar la celda anterior
+    game->board[player->y * game->width + player->x] = -(player_index); // Marcar la celda anterior
+
     // Capturar la celda
     int reward = game->board[new_y * game->width + new_x];
-    game->board[new_y * game->width + new_x] = -(player_index); // Marcar la celda con -(player_index + 1)
+    if(cabeza*player_index == 0){
+        game->board[new_y * game->width + new_x] = 11; // Marcar la celda como ocupada por el jugador
+    }
+    else{
+        game->board[new_y * game->width + new_x] = cabeza*player_index; // Poner la cabeza del jugador en la nueva celda
+    }
 
     // Actualizar el puntaje y la posición del jugador
     player->points += reward;

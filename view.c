@@ -128,6 +128,11 @@ int main(int argc, char const *argv[])
                     printf("| -%s%d%s ", player_colors[player_id % 9], player_id, RESET_COLOR);
                 } else if (cell == 0){
                     printf("|  %s%d%s ", player_colors[0], 0, RESET_COLOR);
+                } else if (cell == 11) {
+                    printf("| %s@%s ", player_colors[0], RESET_COLOR);
+                } else if (cell%10 == 0) {
+                    //cabeza de serpiente
+                    printf("| %s@%s ", player_colors[(cell/10)], RESET_COLOR);
                 } else  {
                     // Celda con recompensa
                     printf("| %2d ", cell);
