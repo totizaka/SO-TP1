@@ -189,6 +189,7 @@ int main(int argc, char const *argv[])
             perror("Error al escribir en el pipe");
             break;
         }
+        usleep(10000);
     }
     
 
