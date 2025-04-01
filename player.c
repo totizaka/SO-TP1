@@ -44,10 +44,10 @@ typedef struct {
 typedef struct {
     sem_t view_pending; // Se usa para indicarle a la vista que hay cambios por imprimir
     sem_t view_done; // Se usa para indicarle al master que la vista terminó de imprimir
-    sem_t master_mutex; // Mutex para evitar inanición del master al acceder al estado <-- jugadores con master
-    sem_t game_state_mutex; // Mutex para el estado del juego <-- jugadores con master
-    sem_t game_player_mutex; // Mutex para la siguiente variable <-- acceder a la variable de a un jugador
-    unsigned int players_reading; // Cantidad de jugadores leyendo el estado
+    sem_t master_mutex; // Mutex para evitar inanición del master al acceder al estado <-- jugadores con master         writer
+    sem_t game_state_mutex; // Mutex para el estado del juego <-- jugadores con master                                  mutex
+    sem_t game_player_mutex; // Mutex para la siguiente variable <-- acceder a la variable de a un jugador              readers_count_mutex
+    unsigned int players_reading; // Cantidad de jugadores leyendo el estado del juego
 } Semaphores;
 
 
@@ -114,23 +114,28 @@ int main(int argc, char const *argv[])
 
      // Bucle principal del jugador
      while (1) {
-        // Incrementar el contador de jugadores leyendo
+
         sem_wait(&sems->master_mutex);
-        sems->players_reading++;
         sem_post(&sems->master_mutex);
-    
-        // Adquirir el semáforo para acceder al estado del juego
-        sem_wait(&sems->game_state_mutex);
-    
+
+        sem_wait(&sems->game_player_mutex);
+        if (sems->players_reading == 0){
+            sems->players_reading++;
+            sem_wait(&sems->game_state_mutex);
+        }
+        sem_post(&sems->game_player_mutex);
+
+        //Consultar estado
+
         // Verificar si el juego terminó
         if (game->game_over) {
-            // Decrementar el contador de jugadores leyendo
-            sem_wait(&sems->master_mutex);
-            sems->players_reading--;
-            sem_post(&sems->master_mutex);
-    
-            // Liberar el semáforo del estado del juego
-            sem_post(&sems->game_state_mutex);
+            
+            sem_wait(&sems->game_player_mutex);
+            if (sems->players_reading == 1){
+                sems->players_reading--;
+                sem_post(&sems->game_state_mutex);
+            }
+            sem_post(&sems->game_player_mutex);
             break;
         }
     
@@ -146,14 +151,13 @@ int main(int argc, char const *argv[])
     
         if (player_index == -1) {
             fprintf(stderr, "Error: No se encontró el jugador con PID %d en la lista de jugadores.\n", pid);
-    
-            // Decrementar el contador de jugadores leyendo
-            sem_wait(&sems->master_mutex);
-            sems->players_reading--;
-            sem_post(&sems->master_mutex);
-    
-            // Liberar el semáforo del estado del juego
-            sem_post(&sems->game_state_mutex);
+
+            sem_wait(&sems->game_player_mutex);
+            if (sems->players_reading == 1){
+                sems->players_reading--;
+                sem_post(&sems->game_state_mutex);
+            }
+            sem_post(&sems->game_player_mutex);
             break;
         }
     
@@ -161,48 +165,30 @@ int main(int argc, char const *argv[])
         Player *player = &game->players[player_index];
     
         // Verificar si el jugador está bloqueado
-        if (player->blocked) {
-            // Decrementar el contador de jugadores leyendo
-            sem_wait(&sems->master_mutex);
-            sems->players_reading--;
-            sem_post(&sems->master_mutex);
-    
-            // Liberar el semáforo del estado del juego
+        if (player->blocked){
             sem_post(&sems->game_state_mutex);
-            break;
+            continue;
         }
-    
+
+        sem_wait(&sems->game_player_mutex);
+        if (sems->players_reading == 1){
+            sems->players_reading--;
+            sem_post(&sems->game_state_mutex);
+        }
+        sem_post(&sems->game_player_mutex);
+
+        //Decidir el siguiente movimiento
+
         // Generar un movimiento aleatorio
         unsigned char movement = rand() % 8;
-    
-        // Liberar el semáforo del estado del juego antes de enviar el movimiento
-        sem_post(&sems->game_state_mutex);
-    
-        // Adquirir el semáforo para enviar el movimiento al máster
-        sem_wait(&sems->game_player_mutex);
-    
+
+        //Enviar movimiento
+        
         // Enviar el movimiento al máster
         if (write(STDOUT_FILENO, &movement, sizeof(movement)) == -1) {
             perror("Error al escribir en el pipe");
-    
-            // Liberar el semáforo del jugador
-            sem_post(&sems->game_player_mutex);
-            // Decrementar el contador de jugadores leyendo
-            sem_wait(&sems->master_mutex);
-            sems->players_reading--;
-            sem_post(&sems->master_mutex);
             break;
         }
-    
-        // Liberar el semáforo del jugador
-        sem_post(&sems->game_player_mutex);
-    
-        // Decrementar el contador de jugadores leyendo
-        sem_wait(&sems->master_mutex);
-        sems->players_reading--;
-        sem_post(&sems->master_mutex);
-
-        usleep(100000);
     }
     
 

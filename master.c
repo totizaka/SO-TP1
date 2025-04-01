@@ -52,6 +52,8 @@ typedef struct {
     unsigned int players_reading;
 } Semaphores;
 
+
+// Direcciones de movimiento (arriba, arriba-derecha, derecha, abajo-derecha, abajo, abajo-izquierda, izquierda, arriba-izquierda)
 int dx[] = {0, 1, 1, 1, 0, -1, -1, -1};
 int dy[] = {-1, -1, 0, 1, 1, 1, 0, -1};
 
@@ -72,9 +74,6 @@ void cleanup_resources(GameMap *game, Semaphores *sems, int shm_state, int shm_s
 }
 
 int validate_move(GameMap *game, int player_index, unsigned char move) {
-    // Direcciones de movimiento (arriba, arriba-derecha, derecha, abajo-derecha, abajo, abajo-izquierda, izquierda, arriba-izquierda)
-    // int dx[] = {0, 1, 1, 1, 0, -1, -1, -1};
-    // int dy[] = {-1, -1, 0, 1, 1, 1, 0, -1};
 
     Player *player = &game->players[player_index];
     int new_x = player->x + dx[move];
@@ -95,8 +94,6 @@ int validate_move(GameMap *game, int player_index, unsigned char move) {
 }
 
 void apply_move(GameMap *game, int player_index, unsigned char move) {
-    // int dx[] = {0, 1, 1, 1, 0, -1, -1, -1};
-    // int dy[] = {-1, -1, 0, 1, 1, 1, 0, -1};
 
     Player *player = &game->players[player_index];
     int new_x = player->x + dx[move];
@@ -223,7 +220,7 @@ int main(int argc, char *argv[]) {
     sem_init(&sems->game_player_mutex, 1, 1);
     sems->players_reading = 0;
 
-    // Distribuir jugadores en el tablero
+    // Distribuir jugadores en el tablero                         HAY QUE HACERLO SIN RANDOM
     for (int i = 0; i < num_players; i++) {
         int x, y;
         do {
@@ -376,18 +373,6 @@ int main(int argc, char *argv[]) {
         // Respetar el delay configurado
         usleep(delay+1000000);
     }
-
- 
-    /*for (int i = 0; i < num_players; i++) {
-        printf("Jugador %d (%s): %d puntos\n", i, game->players[i].player_name, game->players[i].points);
-        if (game->players[i].points > max_points) {
-            max_points = game->players[i].points;
-            winner_index = i;
-            tie = false; // Reiniciar el estado de empate
-        } else if (game->players[i].points == max_points) {
-            tie = true; // Hay un empate
-        }
-    }*/
     
     unsigned int max_points = 0;
     int winner_index = -1;
