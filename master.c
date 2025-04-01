@@ -48,7 +48,7 @@ typedef struct {
     sem_t view_done;
     sem_t master_mutex;
     sem_t game_state_mutex;
-    sem_t game_player_mutex;
+    sem_t players_count_mutex;
     unsigned int players_reading;
 } Semaphores;
 
@@ -73,6 +73,9 @@ void cleanup_resources(GameMap *game, Semaphores *sems, int shm_state, int shm_s
     shm_unlink(SHM_NAME_STATE);
     shm_unlink(SHM_NAME_SYNC);
 }
+
+
+ 
 
 int validate_move(GameMap *game, int player_index, unsigned char move) {
 
@@ -129,47 +132,81 @@ void apply_move(GameMap *game, int player_index, unsigned char move) {
 
 }
 
+pid_t create_player(int * player_pipe, char* player_path, int width, int height){
+    pid_t pid = fork();
+        if (pid == 0) {
+            close(player_pipe[0]); // Cerrar extremo de lectura
+            dup2(player_pipe[1], STDOUT_FILENO); // Redirigir stdout al pipe
+            close(player_pipe[1]);
+
+            char width_str[10], height_str[10];
+            sprintf(width_str, "%d", width);
+            sprintf(height_str, "%d", height);
+            //CHEQUEAR Q ESTA 2 VECES PLAYER_PATH !!!???
+            execl(player_path, player_path, width_str, height_str, NULL); 
+            perror("Error ejecutando el jugador");
+            exit(EXIT_FAILURE);
+        }
+        close(player_pipe[1]); // Cerrar extremo de escritura en el máster
+
+    return pid;
+}
+
+bool block_player(GameMap* game, int player_num){
+    for (int j = 0; j < 8; j++){
+        if(validate_move(game, player_num, j)){
+           return false;
+        }
+    }
+    return true;
+
+
+}
+    
+
+
+
 int main(int argc, char *argv[]) {
-    // Parámetros por defecto
-    unsigned short width = DEFAULT_WIDTH;
-    unsigned short height = DEFAULT_HEIGHT;
+
+    // Parámetros por defecto <-- hay q hacer una funcion
     unsigned int delay = DEFAULT_DELAY;
     unsigned int timeout = DEFAULT_TIMEOUT;
     unsigned int seed = time(NULL);
     char *view_path = NULL;
     char *player_paths[MAX_PLAYERS];
     int num_players = 0;
-
-    // Analizar argumentos manualmente
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-w") == 0 && i + 1 < argc) {
-            width = atoi(argv[++i]);
-            if (width < DEFAULT_WIDTH) width = DEFAULT_WIDTH;
-        } else if (strcmp(argv[i], "-h") == 0 && i + 1 < argc) {
-            height = atoi(argv[++i]);
-            if (height < DEFAULT_HEIGHT) height = DEFAULT_HEIGHT;
-        } else if (strcmp(argv[i], "-d") == 0 && i + 1 < argc) {
-            delay = atoi(argv[++i]);
-        } else if (strcmp(argv[i], "-t") == 0 && i + 1 < argc) {
-            timeout = atoi(argv[++i]);
-        } else if (strcmp(argv[i], "-s") == 0 && i + 1 < argc) {
-            seed = atoi(argv[++i]);
-        } else if (strcmp(argv[i], "-v") == 0 && i + 1 < argc) {
-            view_path = argv[++i];
-        } else if (strcmp(argv[i], "-p") == 0) {
-            while (i + 1 < argc && num_players < MAX_PLAYERS && argv[i + 1][0] != '-') {
-                player_paths[num_players++] = argv[++i];
+    unsigned short width = DEFAULT_WIDTH;
+    unsigned short height = DEFAULT_HEIGHT;
+         // Analizar argumentos manualmente
+         for (int i = 1; i < argc; i++) {
+            if (strcmp(argv[i], "-w") == 0 && i + 1 < argc) {
+                width = atoi(argv[++i]);
+                if (width < DEFAULT_WIDTH) width = DEFAULT_WIDTH;
+            } else if (strcmp(argv[i], "-h") == 0 && i + 1 < argc) {
+                height = atoi(argv[++i]);
+                if (height < DEFAULT_HEIGHT) height = DEFAULT_HEIGHT;
+            } else if (strcmp(argv[i], "-d") == 0 && i + 1 < argc) {
+                delay = atoi(argv[++i]);
+            } else if (strcmp(argv[i], "-t") == 0 && i + 1 < argc) {
+                timeout = atoi(argv[++i]);
+            } else if (strcmp(argv[i], "-s") == 0 && i + 1 < argc) {
+                seed = atoi(argv[++i]);
+            } else if (strcmp(argv[i], "-v") == 0 && i + 1 < argc) {
+                view_path = argv[++i];
+            } else if (strcmp(argv[i], "-p") == 0) {
+                while (i + 1 < argc && num_players < MAX_PLAYERS && argv[i + 1][0] != '-') {
+                    player_paths[num_players++] = argv[++i];
+                }
+            } else {
+                print_usage(argv[0]);
             }
-        } else {
-            print_usage(argv[0]);
         }
-    }
-
-    if (num_players == 0) {
-        fprintf(stderr, "Error: Debe especificar al menos un jugador con -p.\n");
-        print_usage(argv[0]);
-    }
-
+    
+        if (num_players == 0) {
+            fprintf(stderr, "Error: Debe especificar al menos un jugador con -p.\n");
+            print_usage(argv[0]);
+        }    
+   
     // Calcular el tamaño total de la memoria compartida
     size_t shm_size = sizeof(GameMap) + (width * height * sizeof(int));
 
@@ -226,7 +263,7 @@ int main(int argc, char *argv[]) {
     sem_init(&sems->view_done, 1, 1);
     sem_init(&sems->master_mutex, 1, 1);
     sem_init(&sems->game_state_mutex, 1, 1);
-    sem_init(&sems->game_player_mutex, 1, 1);
+    sem_init(&sems->players_count_mutex, 1, 1);
     sems->players_reading = 0;
 
     // Distribuir jugadores en el tablero                         HAY QUE HACERLO SIN RANDOM
@@ -264,6 +301,7 @@ int main(int argc, char *argv[]) {
     }
 
     int player_pipes[MAX_PLAYERS][2];
+    pid_t player_pid;
     for (int i = 0; i < num_players; i++) {
         if (pipe(player_pipes[i]) == -1) {
             perror("Error creando pipe");
@@ -271,20 +309,7 @@ int main(int argc, char *argv[]) {
             exit(EXIT_FAILURE);
         }
 
-        pid_t player_pid = fork();
-        if (player_pid == 0) {
-            close(player_pipes[i][0]); // Cerrar extremo de lectura
-            dup2(player_pipes[i][1], STDOUT_FILENO); // Redirigir stdout al pipe
-            close(player_pipes[i][1]);
-
-            char width_str[10], height_str[10];
-            sprintf(width_str, "%d", width);
-            sprintf(height_str, "%d", height);
-            execl(player_paths[i], player_paths[i], width_str, height_str, NULL);
-            perror("Error ejecutando el jugador");
-            exit(EXIT_FAILURE);
-        }
-        close(player_pipes[i][1]); // Cerrar extremo de escritura en el máster
+        player_pid= create_player(player_pipes[i], player_paths[i], width, height);
         game->players[i].pid = player_pid;
     }
 
@@ -298,7 +323,7 @@ int main(int argc, char *argv[]) {
             break;
         }
 
-        // Configurar los pipes para lectura
+        // Configurar los pipes para lectura 
         FD_ZERO(&read_fds);
         int max_fd = -1;
         for (int i = 0; i < num_players; i++) {
@@ -309,6 +334,7 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
+
 
         // Esperar solicitudes de movimientos
         struct timeval tv = {timeout, 0};
@@ -321,31 +347,21 @@ int main(int argc, char *argv[]) {
             game->game_over = true;
             break;
         }
-
+        sem_wait(&sems->game_state_mutex); //bloqueo lectura de players antes de procesar y ejecutar movimiento
+        sem_wait(&sems->master_mutex);
+        sem_post(&sems->game_state_mutex);
         // Procesar movimientos
         for (int i = 0; i < num_players; i++) {
             if (FD_ISSET(player_pipes[i][0], &read_fds)) {
                 unsigned char move;
                 int bytes_read;
-
-                // Proteger el acceso al pipe con game_player_mutex
-                sem_wait(&sems->game_player_mutex);
                 bytes_read = read(player_pipes[i][0], &move, sizeof(move));
-                sem_post(&sems->game_player_mutex);
 
                 if (bytes_read == 0) {                          //preguntar
                     // Jugador bloqueado (EOF)
-                    sem_wait(&sems->game_state_mutex);
                     game->players[i].blocked = true;
-                    printf("lo bloquie\n");
-                    sem_post(&sems->game_state_mutex);
-
-                    // Actualizar players_reading
-                    sem_wait(&sems->master_mutex);
-                    sems->players_reading--;
-                    sem_post(&sems->master_mutex);
+                    printf("lo bloquie\n"); 
                 } else if (bytes_read > 0) {
-                    sem_wait(&sems->game_state_mutex);
                     if (validate_move(game, i, move)) {
                         apply_move(game, i, move);
                         start_time = time(NULL); // Reiniciar timeout
@@ -353,25 +369,17 @@ int main(int argc, char *argv[]) {
                         game->players[i].invalid_moves++;
                         printf("Cantidad de movimientos inválidos del jugador %d (%s): %u\n", i, game->players[i].player_name, game->players[i].invalid_moves);
                         
-                        int j=0;
-                        int valido=0;
-
-                        for (j = 0; j < 8; j++){
-                            if(validate_move(game, i, j)){
-                                valido=1;
-                                break; // Si hay un movimiento válido, salir del for
-                            }
-                        }
-                        if(!valido){
-                            game->players[i].blocked = true; // Bloquear al jugador si no hay movimientos válidos
-                            printf("Bloqueo del jugador %d (%s)\n", i, game->players[i].player_name);
-                        }
-                            
+                        game->players[i].blocked = block_player(game,i);// Bloquear al jugador si no hay movimientos válidos
+                        
+                        //printf("Bloqueo del jugador %d (%s)\n", i, game->players[i].player_name);
+                             
                     }
-                    sem_post(&sems->game_state_mutex);
                 }
             }
         }
+        
+        sem_post(&sems->master_mutex);
+        
 
         // Notificar a la vista que hay cambios
         sem_post(&sems->view_pending);
@@ -388,8 +396,8 @@ int main(int argc, char *argv[]) {
     bool tie = false;
     
 
-// Esperar a que los procesos hijo terminen
-for (int i = 0; i < num_players; i++) {
+    // Esperar a que los procesos hijo terminen
+    for (int i = 0; i < num_players; i++) {
     int status;
     waitpid(game->players[i].pid, &status, 0);
     if(i<1){
@@ -405,7 +413,7 @@ for (int i = 0; i < num_players; i++) {
         tie = true; // Hay un empate
     }
     printf("Jugador %d (%s) terminó con código de salida %d.\n", i, game->players[i].player_name, WEXITSTATUS(status));
-}
+    }
     if (tie && max_points > 0) {
         printf("¡Hay un empate entre los jugadores con %u puntos!\n", max_points);
     } else if (winner_index != -1) {
