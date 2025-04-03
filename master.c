@@ -89,11 +89,11 @@ int validate_move(GameMap *game, int player_index, unsigned char move) {
 
     // Verificar si la celda está ocupada
     int cell_value = game->board[new_y * game->width + new_x];
-    if (cell_value <= 0) {
-        return 0; // Celda ocupada
+    if (cell_value > 0 && cell_value <10) {
+        return 1; // Celda valida
     }
 
-    return 1; // Movimiento válido
+    return 0; // Celda
 }
 
 void apply_move(GameMap *game, int player_index, unsigned char move) {
@@ -313,10 +313,10 @@ void initialize_semaphores(Semaphores *sems) {
     sems->players_reading = 0;
 }
 
-void launch_view_process(const char *view_path, int width, int height) {
+void launch_view_process(const char *view_path, int width, int height, pid_t *view_pid) {
     if (view_path) {
-        pid_t view_pid = fork();
-        if (view_pid == 0) {
+        *view_pid = fork();
+        if (*view_pid == 0) {
             // Convertir width y height a strings
             char width_str[10], height_str[10];
             sprintf(width_str, "%d", width);
@@ -388,7 +388,8 @@ int main(int argc, char *argv[]) {
     distribute_players(game, player_paths, num_players, width, height);
 
     // Crear proceso para la vista
-    launch_view_process(view_path, width, height);
+    pid_t viewPid;
+    launch_view_process(view_path, width, height, &viewPid);
 
     // Crear pipes y el proceso para cada jugador
     int player_pipes[MAX_PLAYERS][2];
@@ -402,6 +403,8 @@ int main(int argc, char *argv[]) {
         // Verificar timeout
         if (time(NULL) - start_time > timeout) {
             game->game_over = true;
+            //Para que la vista termine
+            sem_post(&sems->view_pending);
             break;
         }
 
@@ -413,6 +416,8 @@ int main(int argc, char *argv[]) {
         }
         if (amountBlocked == num_players){
             game->game_over = true;
+            //Para que la vista termine
+            sem_post(&sems->view_pending);
             break;
         }
         
@@ -447,15 +452,19 @@ int main(int argc, char *argv[]) {
             game->game_over = true;
             break;
         }
-        sem_wait(&sems->game_state_mutex); //bloqueo lectura de players antes de procesar y ejecutar movimiento
-        sem_wait(&sems->master_mutex);
-        sem_post(&sems->game_state_mutex);
+        // sem_wait(&sems->master_mutex); //bloqueo lectura de players antes de procesar y ejecutar movimiento
+        // sem_wait(&sems->game_state_mutex);
+        // sem_post(&sems->master_mutex);
         // Procesar movimientos
         for (int i = 0; i < num_players; i++) {
             if (FD_ISSET(player_pipes[i][0], &read_fds)) {
                 unsigned char move;
                 int bytes_read;
                 bytes_read = read(player_pipes[i][0], &move, sizeof(move));
+
+                sem_wait(&sems->master_mutex); 
+                sem_wait(&sems->game_state_mutex);
+                sem_post(&sems->master_mutex);
 
                 if (bytes_read == 0) {                          //preguntar
                     // Jugador bloqueado (EOF)
@@ -477,10 +486,11 @@ int main(int argc, char *argv[]) {
                              
                     }
                 }
+                sem_post(&sems->game_state_mutex);
             }
         }
         
-        sem_post(&sems->master_mutex);
+        // sem_post(&sems->game_state_mutex);
 
         // Respetar el delay configurado
         usleep(delay * 1000); // Convertir a microsegundos
@@ -492,7 +502,13 @@ int main(int argc, char *argv[]) {
     
 
     // Esperar a que la view termine
-    // HACER WAITPID CON LA VIEW??
+    int viewStatus;
+    waitpid(viewPid, &viewStatus, 0);
+    if (WIFEXITED(viewStatus)) {
+        printf("El proceso de vista terminó con código de salida %d.\n", WEXITSTATUS(viewStatus));
+    } else {
+        printf("El proceso de vista no terminó correctamente.\n");
+    }
 
     // Esperar a que los procesos hijo terminen
     for (int i = 0; i < num_players; i++) {

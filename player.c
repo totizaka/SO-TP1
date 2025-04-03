@@ -14,6 +14,7 @@
 #include <time.h>
 #include <sys/types.h>
 #include <stdbool.h>
+#include <poll.h>
 
 #define SHM_NAME_STATE "/game_state"
 #define SHM_NAME_SYNC "/game_sync"
@@ -111,6 +112,13 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
+    int valid_player_moves[9] = {0};
+    int invalid_player_moves[9] = {0};
+
+    struct pollfd pfd;
+    pfd.fd = STDOUT_FILENO;
+    pfd.events = POLLOUT; // Esperar a que el pipe esté listo para escribir
+
 
      // Bucle principal del jugador
      while (1) {
@@ -120,9 +128,9 @@ int main(int argc, char const *argv[])
 
         sem_wait(&sems->game_player_mutex);
         if (sems->players_reading == 0){
-            sems->players_reading+=1;
             sem_wait(&sems->game_state_mutex);
         }
+        sems->players_reading+=1;
         sem_post(&sems->game_player_mutex);
 
         //Consultar estado
@@ -132,9 +140,9 @@ int main(int argc, char const *argv[])
             
             sem_wait(&sems->game_player_mutex);
             if (sems->players_reading == 1){
-                sems->players_reading-=1;
                 sem_post(&sems->game_state_mutex);
             }
+            sems->players_reading-=1;
             sem_post(&sems->game_player_mutex);
             break;
         }
@@ -154,9 +162,9 @@ int main(int argc, char const *argv[])
 
             sem_wait(&sems->game_player_mutex);
             if (sems->players_reading == 1){
-                sems->players_reading-=1;
                 sem_post(&sems->game_state_mutex);
             }
+            sems->players_reading-=1;
             sem_post(&sems->game_player_mutex);
             break;
         }
@@ -168,18 +176,18 @@ int main(int argc, char const *argv[])
         if (player->blocked){
             sem_wait(&sems->game_player_mutex);
             if (sems->players_reading == 1){
-                sems->players_reading-=1;
                 sem_post(&sems->game_state_mutex);
             }
+            sems->players_reading-=1;
             sem_post(&sems->game_player_mutex);
             break;
         }
 
         sem_wait(&sems->game_player_mutex);
         if (sems->players_reading == 1){
-            sems->players_reading-=1;
             sem_post(&sems->game_state_mutex);
         }
+        sems->players_reading-=1;
         sem_post(&sems->game_player_mutex);
 
         //Decidir el siguiente movimiento
@@ -190,11 +198,32 @@ int main(int argc, char const *argv[])
         //Enviar movimiento
         
         // Enviar el movimiento al máster
-        if (write(STDOUT_FILENO, &movement, sizeof(movement)) == -1) {
-            perror("Error al escribir en el pipe");
-            break;
+        if (game->players[player_index].valid_moves > valid_player_moves[player_index]){
+        
+            if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
+                if (pfd.revents & POLLOUT) {
+                    write(STDOUT_FILENO, &movement, sizeof(movement));
+                }
+            }
+            valid_player_moves[player_index]++;
         }
-        usleep(100000);
+        else if (game->players[player_index].invalid_moves < invalid_player_moves[player_index]){
+        
+            if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
+                if (pfd.revents & POLLOUT) {
+                    write(STDOUT_FILENO, &movement, sizeof(movement));
+                }
+            }
+            invalid_player_moves[player_index]--;
+        }
+        else if (game->players[player_index].valid_moves == game->players[player_index].invalid_moves){
+            if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
+                if (pfd.revents & POLLOUT) {
+                    write(STDOUT_FILENO, &movement, sizeof(movement));
+                }
+            }
+        }
+        // usleep(100000);
     }
     
 
