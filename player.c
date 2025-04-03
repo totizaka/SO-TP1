@@ -120,7 +120,7 @@ int main(int argc, char const *argv[])
 
         sem_wait(&sems->game_player_mutex);
         if (sems->players_reading == 0){
-            sems->players_reading++;
+            sems->players_reading+=1;
             sem_wait(&sems->game_state_mutex);
         }
         sem_post(&sems->game_player_mutex);
@@ -132,7 +132,7 @@ int main(int argc, char const *argv[])
             
             sem_wait(&sems->game_player_mutex);
             if (sems->players_reading == 1){
-                sems->players_reading--;
+                sems->players_reading-=1;
                 sem_post(&sems->game_state_mutex);
             }
             sem_post(&sems->game_player_mutex);
@@ -154,7 +154,7 @@ int main(int argc, char const *argv[])
 
             sem_wait(&sems->game_player_mutex);
             if (sems->players_reading == 1){
-                sems->players_reading--;
+                sems->players_reading-=1;
                 sem_post(&sems->game_state_mutex);
             }
             sem_post(&sems->game_player_mutex);
@@ -166,13 +166,18 @@ int main(int argc, char const *argv[])
     
         // Verificar si el jugador está bloqueado
         if (player->blocked){
-            sem_post(&sems->game_state_mutex);
-            continue;
+            sem_wait(&sems->game_player_mutex);
+            if (sems->players_reading == 1){
+                sems->players_reading-=1;
+                sem_post(&sems->game_state_mutex);
+            }
+            sem_post(&sems->game_player_mutex);
+            break;
         }
 
         sem_wait(&sems->game_player_mutex);
         if (sems->players_reading == 1){
-            sems->players_reading--;
+            sems->players_reading-=1;
             sem_post(&sems->game_state_mutex);
         }
         sem_post(&sems->game_player_mutex);
