@@ -18,6 +18,7 @@
 #include <math.h>
 #include "game_structs.h"
 
+#include <time.h>
 
 #define MAX_PLAYERS 9
 #define DEFAULT_WIDTH 10
@@ -203,64 +204,70 @@ void initialize_board(GameMap *game, int width, int height, unsigned int seed) {
 }
 
 
-void distribute_players(GameMap *game, char *player_paths[], int num_players, int width, int height) {
-    int positions[9][2] = {0}; // Para almacenar las posiciones
-    
-    if (num_players == 1) {
-        // Un solo jugador al centro
-        positions[0][0] = width / 2;
-        positions[0][1] = height / 2;
-    } 
-    else if (num_players == 2) {
-        // Dos jugadores en extremos opuestos
-        positions[0][0] = width / 4; positions[0][1] = height / 2;
-        positions[1][0] = 3 * width / 4; positions[1][1] = height / 2;
-    } 
-    else if (num_players == 3 || num_players == 4) {
-        // Tres o cuatro jugadores en esquinas
-        positions[0][0] = width / 4; positions[0][1] = height / 4;
-        positions[1][0] = 3 * width / 4; positions[1][1] = height / 4;
-        positions[2][0] = width / 4; positions[2][1] = 3 * height / 4;
-        if (num_players == 4) positions[3][0] = 3 * width / 4, positions[3][1] = 3 * height / 4;
-    } 
-    else if (num_players >= 5 && num_players <= 6) {
-        // Cinco o seis jugadores en hexágono
-        positions[0][0] = width / 4; positions[0][1] = height / 4;
-        positions[1][0] = 3 * width / 4; positions[1][1] = height / 4;
-        positions[2][0] = width / 4; positions[2][1] = 3 * height / 4;
-        positions[3][0] = 3 * width / 4; positions[3][1] = 3 * height / 4;
-        positions[4][0] = width / 2; positions[4][1] = height / 2;
-        if (num_players == 6) positions[5][0] = width / 2, positions[5][1] = height / 4;
-    } 
-    else {
-        // Siete a nueve jugadores en una cuadrícula espaciosa
-        int step_x = width / 4, step_y = height / 4;
-        int index = 0;
-        for (int i = 1; i <= 3 && index < num_players; i++) {
-            for (int j = 1; j <= 3 && index < num_players; j++) {
-                positions[index][0] = j * step_x;
-                positions[index][1] = i * step_y;
-                index++;
-            }
-        }
+// Función para hacer shuffle de un array
+void shuffle(int *array, int n) {
+    for (int i = n - 1; i > 0; i--) {
+        int j = rand() % (i + 1);
+        int temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
     }
+}
 
-    // Asignar posiciones a los jugadores
+
+void distribute_players(GameMap *game, char *player_paths[], int num_players, int width, int height) {
+    // Inicializar la semilla para rand una sola vez
+
+    // Grilla 3x3
+    int grid_positions[9][2] = {
+        {width / 6, height / 6},                        // 0
+        {width / 2, height / 6},                        // 1
+        {5 * width / 6, height / 6},                    // 2
+        {width / 6, height / 2},                        // 3
+        {width / 2, height / 2},                        // 4
+        {5 * width / 6, height / 2},                    // 5
+        {width / 6, 5 * height / 6},                    // 6
+        {width / 2, 5 * height / 6},                    // 7
+        {5 * width / 6, 5 * height / 6}                 // 8
+    };
+
+    // Índices para cada cantidad de jugadores
+    int index_sets[9][9] = {
+        {4},                                            // 1
+        {0, 8},                                         // 2
+        {0, 4, 8},                                      // 3
+        {0, 2, 6, 8},                                   // 4
+        {0, 2, 4, 6, 8},                                // 5
+        {0, 2, 3, 5, 6, 8},                             // 6
+        {0, 2, 4, 6, 7, 8, 1},                          // 7
+        {0, 1, 2, 3, 5, 6, 7, 8},                       // 8
+        {0, 1, 2, 3, 4, 5, 6, 7, 8}                     // 9
+    };
+
+    // Crear un array con el orden original de jugadores y mezclarlo
+    int shuffled_indices[9];
+    for (int i = 0; i < num_players; i++){
+        shuffled_indices[i] = i;
+    }
+    shuffle(shuffled_indices, num_players);
+
     for (int i = 0; i < num_players; i++) {
-        int x = positions[i][0];
-        int y = positions[i][1];
+        int player_idx = shuffled_indices[i];
+        int pos_idx = index_sets[num_players - 1][i];
+        int x = grid_positions[pos_idx][0];
+        int y = grid_positions[pos_idx][1];
 
-        game->players[i].x = x;
-        game->players[i].y = y;
-        game->players[i].points = 0;
-        game->players[i].valid_moves = 0;
-        game->players[i].invalid_moves = 0;
-        game->players[i].blocked = false;
-        strncpy(game->players[i].player_name, player_paths[i], sizeof(game->players[i].player_name) - 1);
-        game->players[i].player_name[sizeof(game->players[i].player_name) - 1] = '\0';
- 
-        // Marcar la celda inicial del jugador con su índice
-        game->board[y * width + x] = -i;
+        game->players[player_idx].x = x;
+        game->players[player_idx].y = y;
+        game->players[player_idx].points = 0;
+        game->players[player_idx].valid_moves = 0;
+        game->players[player_idx].invalid_moves = 0;
+        game->players[player_idx].blocked = false;
+
+        strncpy(game->players[player_idx].player_name, player_paths[player_idx], sizeof(game->players[player_idx].player_name) - 1);
+        game->players[player_idx].player_name[sizeof(game->players[player_idx].player_name) - 1] = '\0';
+
+        game->board[y * width + x] = -player_idx;
     }
 }
 
@@ -348,9 +355,11 @@ int main(int argc, char *argv[]) {
     // Distribuir jugadores en el tablero                         
     distribute_players(game, player_paths, num_players, width, height);
 
-    // Crear proceso para la vista
     pid_t viewPid;
-    launch_view_process(view_path, width, height, &viewPid);
+    if(view_path != NULL){
+        // Crear proceso para la vista
+        launch_view_process(view_path, width, height, &viewPid);
+    }
 
     // Crear pipes y el proceso para cada jugador
     int player_pipes[MAX_PLAYERS][2];
@@ -382,11 +391,13 @@ int main(int argc, char *argv[]) {
             break;
         }
         
-        // Notificar a la vista que hay cambios
-        sem_post(&sems->view_pending);
+        if(view_path != NULL){
+            // Notificar a la vista que hay cambios
+            sem_post(&sems->view_pending);
 
-        // Esperar a que la vista termine de imprimir
-        sem_wait(&sems->view_done);
+            // Esperar a que la vista termine de imprimir
+            sem_wait(&sems->view_done);
+        }
         
 
         // Configurar los pipes para lectura 
@@ -437,8 +448,6 @@ int main(int argc, char *argv[]) {
                         start_time = time(NULL); // Reiniciar timeout
                     } else {
                         game->players[i].invalid_moves++;
-                        printf("Cantidad de movimientos inválidos del jugador %d (%s): %u\n", i, game->players[i].player_name, game->players[i].invalid_moves);
-                        
                         game->players[i].blocked = block_player(game,i);// Bloquear al jugador si no hay movimientos válidos
                         
                         if(game->players[i].blocked){
@@ -454,7 +463,9 @@ int main(int argc, char *argv[]) {
         // sem_post(&sems->game_state_mutex);
 
         // Respetar el delay configurado
-        usleep(delay * 1000); // Convertir a microsegundos
+        if(view_path!=NULL){
+            usleep(delay * 1000); // Convertir a microsegundos
+        }
     }
     
     unsigned int max_points = 0;
@@ -463,38 +474,70 @@ int main(int argc, char *argv[]) {
     
 
     // Esperar a que la view termine
-    int viewStatus;
-    waitpid(viewPid, &viewStatus, 0);
-    if (WIFEXITED(viewStatus)) {
-        printf("El proceso de vista terminó con código de salida %d.\n", WEXITSTATUS(viewStatus));
-    } else {
-        printf("El proceso de vista no terminó correctamente.\n");
+    if(view_path!=NULL){
+        int viewStatus;
+        waitpid(viewPid, &viewStatus, 0);
+        if (WIFEXITED(viewStatus)) {
+            printf("El proceso de vista terminó con código de salida %d.\n", WEXITSTATUS(viewStatus));
+        } else {
+            printf("El proceso de vista no terminó correctamente.\n");
+        }
     }
 
     // Esperar a que los procesos hijo terminen
     for (int i = 0; i < num_players; i++) {
-    int status;
-    waitpid(game->players[i].pid, &status, 0);
-    if(i<1){
-           // Imprimir resumen final del juego
-    printf("\n=== Resumen del juego ===\n");
+        int status;
+        waitpid(game->players[i].pid, &status, 0);
+
+        if(WIFEXITED(status)) {
+            printf("El proceso del jugador %d (%s) terminó con código de salida %d.\n", i, game->players[i].player_name, WEXITSTATUS(status));
+        } else {
+            printf("El proceso del jugador %d (%s) no terminó correctamente.\n", i, game->players[i].player_name);
+        }
     }
-    printf("Jugador %d (%s): %u puntos\n", i, game->players[i].player_name, game->players[i].points);
-    if (game->players[i].points > max_points) {
-        max_points = game->players[i].points;
-        winner_index = i;
-        tie = false; // Reiniciar el estado de empate
-    } else if (game->players[i].points == max_points) {
-        tie = true; // Hay un empate
+    // Imprimir resumen final del juego
+    printf("\n=== Resumen del juego ===\n\n");
+    // Imprimir resumen de cada jugador
+    for (int i = 0; i < num_players; i++) {
+        printf("Jugador %d (%s): %u puntos / %d mov invalidos / %d mov validos\n", i, game->players[i].player_name, game->players[i].points, game->players[i].invalid_moves, game->players[i].valid_moves);
+        if (game->players[i].points > max_points) {
+            max_points = game->players[i].points;
+            winner_index = i;
+            tie = false;
+        } else if (game->players[i].points == max_points) {
+            int current_invalid = game->players[i].invalid_moves;
+            int winner_invalid = game->players[winner_index].invalid_moves;
+    
+            if (current_invalid < winner_invalid) {
+                winner_index = i;
+                tie = false;
+            } else if (current_invalid == winner_invalid) {
+                int current_valid = game->players[i].valid_moves;
+                int winner_valid = game->players[winner_index].valid_moves;
+    
+                if (current_valid < winner_valid) {
+                    winner_index = i;
+                    tie = false;
+                } else if (current_valid == winner_valid) {
+                    tie = true;
+                }
+            } else {
+                tie = true;
+            }
+        }
     }
-    printf("Jugador %d (%s) terminó con código de salida %d.\n", i, game->players[i].player_name, WEXITSTATUS(status));
-    }
+    
     if (tie && max_points > 0) {
-        printf("¡Hay un empate entre los jugadores con %u puntos!\n", max_points);
+        printf("\n¡Hay un empate entre jugadores con %u puntos y mismos criterios de desempate!\n", max_points);
     } else if (winner_index != -1) {
-        printf("¡El ganador es el Jugador %d (%s) con %u puntos!\n", winner_index, game->players[winner_index].player_name, max_points);
+        printf("\n¡El ganador es el Jugador %d!!! (%s) con %u puntos / %d movimientos invalidos / %d movimientos validos\n",
+               winner_index,
+               game->players[winner_index].player_name,
+               max_points,
+               game->players[winner_index].invalid_moves,
+               game->players[winner_index].valid_moves);
     } else {
-        printf("No hay ganador.\n");
+        printf("\nNo hay ganador.\n");
     }
 
     // Liberar recursos

@@ -143,19 +143,23 @@ int main(int argc, char const *argv[])
         
         // Enviar el movimiento al máster
         if (game->players[player_index].valid_moves > valid_player_moves[player_index]){
-        
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
                 if (pfd.revents & POLLOUT) {
-                    write(STDOUT_FILENO, &movement, sizeof(movement));
+                    if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
+                        perror("Error al escribir en el pipe");
+                        break;
+                    }
                 }
             }
             valid_player_moves[player_index]++;
         }
         else if (game->players[player_index].invalid_moves < invalid_player_moves[player_index]){
-        
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
                 if (pfd.revents & POLLOUT) {
-                    write(STDOUT_FILENO, &movement, sizeof(movement));
+                    if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
+                        perror("Error al escribir en el pipe");
+                        break;
+                    }
                 }
             }
             invalid_player_moves[player_index]--;
@@ -163,7 +167,10 @@ int main(int argc, char const *argv[])
         else if (game->players[player_index].valid_moves == game->players[player_index].invalid_moves){
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
                 if (pfd.revents & POLLOUT) {
-                    write(STDOUT_FILENO, &movement, sizeof(movement));
+                    if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
+                        perror("Error al escribir en el pipe");
+                        break;
+                    }
                 }
             }
         }
