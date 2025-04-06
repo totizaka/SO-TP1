@@ -16,48 +16,17 @@
 #include <errno.h>
 #include <sys/select.h>
 #include <math.h>
+#include "game_structs.h"
 
-#define SHM_NAME_STATE "/game_state"
-#define SHM_NAME_SYNC "/game_sync"
+
 #define MAX_PLAYERS 9
 #define DEFAULT_WIDTH 10
 #define DEFAULT_HEIGHT 10
 #define DEFAULT_DELAY 200
 #define DEFAULT_TIMEOUT 10
 
-typedef struct {
-    char player_name[16];
-    unsigned int points;
-    unsigned int invalid_moves;
-    unsigned int valid_moves;
-    unsigned short x, y;
-    pid_t pid;
-    bool blocked;
-} Player;
-
-typedef struct {
-    unsigned short width;
-    unsigned short height;
-    unsigned int num_players;
-    Player players[MAX_PLAYERS];
-    bool game_over;
-    int board[];
-} GameMap;
-
-typedef struct {
-    sem_t view_pending;
-    sem_t view_done;
-    sem_t master_mutex;
-    sem_t game_state_mutex;
-    sem_t players_count_mutex;
-    unsigned int players_reading;
-} Semaphores;
-
 int cabeza = 10; // Carácter que representa la cabeza del jugador
 
-// Direcciones de movimiento (arriba, arriba-derecha, derecha, abajo-derecha, abajo, abajo-izquierda, izquierda, arriba-izquierda)
-int dx[] = {0, 1, 1, 1, 0, -1, -1, -1};
-int dy[] = {-1, -1, 0, 1, 1, 1, 0, -1};
 
 void print_usage(const char *prog_name) {
     fprintf(stderr, "Uso: %s [-w width] [-h height] [-d delay] [-t timeout] [-s seed] [-v view] -p player1 [player2 ...]\n", prog_name);
@@ -199,21 +168,12 @@ void parse_arguments(int argc, char *argv[], unsigned int *delay, unsigned int *
 void create_shared_memory(int width, int height, int *shm_state, int *shm_sync, GameMap **game, Semaphores **sems) {
     size_t shm_size = sizeof(GameMap) + (width * height * sizeof(int));
 
-    // Crear memoria compartida para el estado del juego
-    *shm_state = shm_open(SHM_NAME_STATE, O_CREAT | O_RDWR, 0666);
-    if (*shm_state == -1) {
-        perror("Error creando shm_state");
-        exit(EXIT_FAILURE);
-    }
+    // Crear memoria compartida para los semáforos
+    *shm_state = shm_handler(SHM_NAME_STATE, O_CREAT | O_RDWR, 0666, "shm_state", 0, NULL);
     ftruncate(*shm_state, shm_size);
 
-    // Crear memoria compartida para los semáforos
-    *shm_sync = shm_open(SHM_NAME_SYNC, O_CREAT | O_RDWR, 0666);
-    if (*shm_sync == -1) {
-        perror("Error creando shm_sync");
-        shm_unlink(SHM_NAME_STATE);
-        exit(EXIT_FAILURE);
-    }
+
+    *shm_sync  = shm_handler(SHM_NAME_SYNC,  O_CREAT | O_RDWR, 0666, "shm_sync", 1, SHM_NAME_STATE);
     ftruncate(*shm_sync, sizeof(Semaphores));
 
     // Mapear memoria compartida
@@ -223,6 +183,7 @@ void create_shared_memory(int width, int height, int *shm_state, int *shm_sync, 
         cleanup_resources(NULL, NULL, *shm_state, *shm_sync);
         exit(EXIT_FAILURE);
     }
+    
 
     *sems = mmap(NULL, sizeof(Semaphores), PROT_READ | PROT_WRITE, MAP_SHARED, *shm_sync, 0);
     if (*sems == MAP_FAILED) {
@@ -297,7 +258,7 @@ void distribute_players(GameMap *game, char *player_paths[], int num_players, in
         game->players[i].blocked = false;
         strncpy(game->players[i].player_name, player_paths[i], sizeof(game->players[i].player_name) - 1);
         game->players[i].player_name[sizeof(game->players[i].player_name) - 1] = '\0';
-
+ 
         // Marcar la celda inicial del jugador con su índice
         game->board[y * width + x] = -i;
     }
@@ -309,7 +270,7 @@ void initialize_semaphores(Semaphores *sems) {
     sem_init(&sems->view_done, 1, 0);
     sem_init(&sems->master_mutex, 1, 1);
     sem_init(&sems->game_state_mutex, 1, 1);
-    sem_init(&sems->players_count_mutex, 1, 1);
+    sem_init(&sems->game_player_mutex, 1, 1);
     sems->players_reading = 0;
 }
 

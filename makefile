@@ -4,25 +4,46 @@ CFLAGS = -Wall -g -fsanitize=address
 OBJ_MASTER = master.o
 OBJ_PLAYER = player.o
 OBJ_VIEW = view.o
+OBJ_GAME = game_structs.o
+
 
 # Regla principal
-all: $(OBJ_MASTER) $(OBJ_PLAYER) $(OBJ_VIEW)
+all: $(OBJ_GAME) $(OBJ_MASTER) $(OBJ_PLAYER) $(OBJ_VIEW)
     
-$(OBJ_MASTER): master.c
-	$(CC) $(CFLAGS) master.c -o $(OBJ_MASTER) 
 
-$(OBJ_PLAYER): player.c
-	$(CC) $(CFLAGS) player.c -o $(OBJ_PLAYER) 
+# Compilar game_structs.c
+$(OBJ_GAME): game_structs.c game_structs.h
+	$(CC) $(CFLAGS) -c game_structs.c -o game_structs.o
 
-$(OBJ_VIEW): view.c
-	$(CC) $(CFLAGS) view.c -o $(OBJ_VIEW) 
 
-# Regla para ejecutar el programa con los parámetros adecuados
-run: all
-	./$(OBJ_MASTER) -v ./$(OBJ_VIEW) -p ./$(OBJ_PLAYER)
+# Compilar master.c
+$(OBJ_MASTER): master.c game_structs.h $(OBJ_GAME)
+	$(CC) $(CFLAGS) -c master.c -o master.o 
+
+# Compilar player.c
+$(OBJ_PLAYER): player.c game_structs.h $(OBJ_GAME)
+	$(CC) $(CFLAGS) -c player.c -o player.o 
+
+# Compilar view.c
+$(OBJ_VIEW): view.c game_structs.h $(OBJ_GAME)
+	$(CC) $(CFLAGS) -c view.c -o view.o 
+
+# Enlazar los ejecutables
+master: $(OBJ_MASTER) $(OBJ_GAME)
+	$(CC) $(CFLAGS) master.o game_structs.o -o master
+
+player: $(OBJ_PLAYER) $(OBJ_GAME)
+	$(CC) $(CFLAGS) player.o game_structs.o -o player
+
+view: $(OBJ_VIEW) $(OBJ_GAME)
+	$(CC) $(CFLAGS) view.o game_structs.o -o view
+
+# Ejecutar el programa
+run: master player view
+	./master -v ./view -p ./player
 
 # Limpieza de archivos compilados
 clean:
-	rm -f *.o
+	rm -f *.o master player view
 
 
