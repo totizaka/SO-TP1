@@ -49,10 +49,8 @@ int main(int argc, char const *argv[])
     int player_pipe[2];
     if (pipe(player_pipe) == -1) {
         perror("Error creando el pipe");
-        munmap(game, shm_size);
-        munmap(sems, sizeof(Semaphores));
-        close(shm_state);
-        close(shm_sync);
+
+        shm_closer(game, shm_size, sems, shm_state, shm_sync,0);
         exit(EXIT_FAILURE);
     }
 
@@ -172,10 +170,10 @@ int main(int argc, char const *argv[])
     
 
     // Liberar recursos
-    munmap(game, shm_size);
-    munmap(sems, sizeof(Semaphores));
-    close(shm_state);
-    close(shm_sync);
+
+    shm_closer(game, shm_size, sems, shm_state, shm_sync,0);
+
+
     close(player_pipe[0]);
     close(player_pipe[1]);
     return 0;

@@ -55,7 +55,9 @@ typedef struct {
 extern const int dx[8];  // Solo declaración
 extern const int dy[8];  // Solo declaración
 
-int shm_handler(char *name, int flag, mode_t mode,const char *desc, int auth_flag, const char *to_clean);void *shm_map(int fd, size_t size, int prot, const char *desc);
+int shm_handler(char *name, int flag, mode_t mode,const char *desc, int auth_flag, const char *to_clean);
+void *shm_map(int fd, size_t size, int prot, const char *desc);
+void shm_closer(GameMap *game, size_t game_size, Semaphores *sems, int shm_state, int shm_sync, int auth_flag);
 
 #endif
 

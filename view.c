@@ -31,6 +31,40 @@ const char *player_colors[] = {
 #define RESET_COLOR "\033[0m"
 
 
+void print_game_board(GameMap *game, int width, int height, const char *player_colors[]) {
+            
+    printf("\nTablero:\n");
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            int cell = game->board[y * width + x];
+            if (cell < 0) {
+                // Celda capturada por un jugador
+                int player_id = -cell; // Convertir a índice de jugador
+                printf("| -%s%d%s ", player_colors[player_id % 9], player_id, RESET_COLOR);
+            } else if (cell == 0){
+                printf("|  %s%d%s ", player_colors[0], 0, RESET_COLOR);
+            } else if (cell == 11) {
+                printf("| %s@%s ", player_colors[0], RESET_COLOR);
+            } else if (cell%10 == 0) {
+                //cabeza de serpiente
+                printf("| %s@%s ", player_colors[(cell/10)], RESET_COLOR);
+            } else  {
+                // Celda con recompensa
+                printf("| %2d ", cell);
+            } 
+        }
+        printf("|\n");
+        for (int x = 0; x < width; x++) {
+            printf("-----");
+        }
+        printf("\n");
+        
+    }
+}
+
+
+
+
 int main(int argc, char const *argv[])
 {
     if (argc != 3) {
@@ -70,41 +104,14 @@ int main(int argc, char const *argv[])
                 game->players[i].x, game->players[i].y);
         }
 
+    
         // Imprimir Tablero
-        printf("\nTablero:\n");
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                int cell = game->board[y * width + x];
-                if (cell < 0) {
-                    // Celda capturada por un jugador
-                    int player_id = -cell; // Convertir a índice de jugador
-                    printf("| -%s%d%s ", player_colors[player_id % 9], player_id, RESET_COLOR);
-                } else if (cell == 0){
-                    printf("|  %s%d%s ", player_colors[0], 0, RESET_COLOR);
-                } else if (cell == 11) {
-                    printf("| %s@%s ", player_colors[0], RESET_COLOR);
-                } else if (cell%10 == 0) {
-                    //cabeza de serpiente
-                    printf("| %s@%s ", player_colors[(cell/10)], RESET_COLOR);
-                } else  {
-                    // Celda con recompensa
-                    printf("| %2d ", cell);
-                } 
-            }
-            printf("|\n");
-            for (int x = 0; x < width; x++) {
-                printf("-----");
-            }
-            printf("\n");
-        }
-
+        print_game_board(game, width, height, player_colors);        
         //Seguimos
         sem_post(&sems->view_done);
-    }
+        }
 
-    munmap(game, shm_size);
-    munmap(sems, sizeof(Semaphores));
-    close(shm_state);
-    close(shm_sync);
+    shm_closer(game, shm_size, sems, shm_state, shm_sync,0);
+
     return 0;
 }
