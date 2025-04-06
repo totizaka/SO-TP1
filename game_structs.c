@@ -32,4 +32,19 @@ const int dy[] = {-1, -1, 0, 1, 1, 1, 0, -1};
         return mapped;
     }
 
+    void shm_closer(GameMap *game, size_t game_size, Semaphores *sems, int shm_state, int shm_sync, int auth_flag) {
+        if (game) munmap(game, game_size);
+        if (sems) munmap(sems, sizeof(Semaphores));
+    
+        close(shm_state);
+        close(shm_sync);
+
+        if (auth_flag){
+           shm_unlink(SHM_NAME_STATE);
+           shm_unlink(SHM_NAME_SYNC);
+
+        }
+    }
+    
+
 

@@ -34,16 +34,8 @@ void print_usage(const char *prog_name) {
     exit(EXIT_FAILURE);
 }
 
-void cleanup_resources(GameMap *game, Semaphores *sems, int shm_state, int shm_sync) {
-    if (game) munmap(game, sizeof(GameMap) + (game->width * game->height * sizeof(int)));
-    if (sems) munmap(sems, sizeof(Semaphores));
 
-    close(shm_state);
-    close(shm_sync);
 
-    shm_unlink(SHM_NAME_STATE);
-    shm_unlink(SHM_NAME_SYNC);
-}
 
 
 int validate_move(GameMap *game, int player_index, unsigned char move) {
@@ -181,7 +173,7 @@ void create_shared_memory(int width, int height, int *shm_state, int *shm_sync, 
     *game = mmap(NULL, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, *shm_state, 0);
     if (*game == MAP_FAILED) {
         perror("Error mapeando shm_state");
-        cleanup_resources(NULL, NULL, *shm_state, *shm_sync);
+        shm_closer(NULL,0, NULL, *shm_state, *shm_sync,1);
         exit(EXIT_FAILURE);
     }
     
@@ -189,7 +181,7 @@ void create_shared_memory(int width, int height, int *shm_state, int *shm_sync, 
     *sems = mmap(NULL, sizeof(Semaphores), PROT_READ | PROT_WRITE, MAP_SHARED, *shm_sync, 0);
     if (*sems == MAP_FAILED) {
         perror("Error mapeando shm_sync");
-        cleanup_resources(*game, NULL, *shm_state, *shm_sync);
+        shm_closer(NULL, 0, NULL, *shm_state, *shm_sync, 1);
         exit(EXIT_FAILURE);
     }
 }
@@ -309,7 +301,7 @@ void create_player_processes(GameMap *game, Semaphores *sems, int shm_state, int
         // Crear un pipe para la comunicación con el jugador
         if (pipe(player_pipes[i]) == -1) {
             perror("Error creando pipe");
-            cleanup_resources(game, sems, shm_state, shm_sync);
+            shm_closer(game,  sizeof(GameMap) + ( game->width * game->height * sizeof(int) ),sems,shm_state,shm_sync,1);
             exit(EXIT_FAILURE);
         }
 
@@ -541,7 +533,9 @@ int main(int argc, char *argv[]) {
     }
 
     // Liberar recursos
-    cleanup_resources(game, sems, shm_state, shm_sync);
+
+    shm_closer(game,  sizeof(GameMap) + ( game->width * game->height * sizeof(int) ),sems,shm_state,shm_sync,1);
+
 
     return 0;
 }
