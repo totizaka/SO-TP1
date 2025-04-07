@@ -1,49 +1,57 @@
 # Variables
 CC = gcc
 CFLAGS = -Wall -g -fsanitize=address
-OBJ_MASTER = master.o
-OBJ_PLAYER = player.o
-OBJ_VIEW = view.o
+
 OBJ_GAME = game_structs.o
 
+# Archivos objeto intermedios
+OBJ_MASTER = master_tmp.o
+OBJ_PLAYER = player_tmp.o
+OBJ_VIEW = view_tmp.o
 
-# Regla principal
-all: $(OBJ_GAME) $(OBJ_MASTER) $(OBJ_PLAYER) $(OBJ_VIEW)
-    
+# Ejecutables (con .o como extensión, si así lo querés)
+EXE_MASTER = master.o
+EXE_PLAYER = player.o
+EXE_VIEW = view.o
+
+.PHONY: all clean run
+
+all: $(EXE_MASTER) $(EXE_PLAYER) $(EXE_VIEW)
 
 # Compilar game_structs.c
 $(OBJ_GAME): game_structs.c game_structs.h
-	$(CC) $(CFLAGS) -c game_structs.c -o game_structs.o
-
+	$(CC) $(CFLAGS) -c game_structs.c -o $@
 
 # Compilar master.c
-$(OBJ_MASTER): master.c game_structs.h $(OBJ_GAME)
-	$(CC) $(CFLAGS) -c master.c -o master.o 
+$(OBJ_MASTER): master.c game_structs.h
+	$(CC) $(CFLAGS) -c master.c -o $@
 
 # Compilar player.c
-$(OBJ_PLAYER): player.c game_structs.h $(OBJ_GAME)
-	$(CC) $(CFLAGS) -c player.c -o player.o 
+$(OBJ_PLAYER): player.c game_structs.h
+	$(CC) $(CFLAGS) -c player.c -o $@
 
 # Compilar view.c
-$(OBJ_VIEW): view.c game_structs.h $(OBJ_GAME)
-	$(CC) $(CFLAGS) -c view.c -o view.o 
+$(OBJ_VIEW): view.c game_structs.h
+	$(CC) $(CFLAGS) -c view.c -o $@
 
-# Enlazar los ejecutables
-master: $(OBJ_MASTER) $(OBJ_GAME)
-	$(CC) $(CFLAGS) master.o game_structs.o -o master
+# Enlazar ejecutables
+$(EXE_MASTER): $(OBJ_MASTER) $(OBJ_GAME)
+	$(CC) $(CFLAGS) $(OBJ_MASTER) $(OBJ_GAME) -o $@
 
-player: $(OBJ_PLAYER) $(OBJ_GAME)
-	$(CC) $(CFLAGS) player.o game_structs.o -o player
+$(EXE_PLAYER): $(OBJ_PLAYER) $(OBJ_GAME)
+	$(CC) $(CFLAGS) $(OBJ_PLAYER) $(OBJ_GAME) -o $@
 
-view: $(OBJ_VIEW) $(OBJ_GAME)
-	$(CC) $(CFLAGS) view.o game_structs.o -o view
+$(EXE_VIEW): $(OBJ_VIEW) $(OBJ_GAME)
+	$(CC) $(CFLAGS) $(OBJ_VIEW) $(OBJ_GAME) -o $@
 
-# Ejecutar el programa
-run: master player view
-	./master -v ./view -p ./player
+run: all
+	@if [ -z "$(PLAYER_PATH)" ]; then \
+		echo "Por favor, especifica el path de los jugadores con 'make run PLAYER_PATH=\"path1 path2 ...\"'"; \
+		exit 1; \
+	fi
+	./$(EXE_MASTER) -v ./$(EXE_VIEW) -p $(PLAYER_PATH)
 
-# Limpieza de archivos compilados
 clean:
-	rm -f *.o master player view
+	rm -f *.o *_tmp.o
 
 
