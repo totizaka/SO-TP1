@@ -18,6 +18,34 @@
 #include "game_structs.h"
 
 
+int next_movement(GameMap *game, Player *player, unsigned short width, unsigned short height) {
+    unsigned char best_move = 0;
+    int max_value = -1000000;
+
+    for (unsigned char dir = 0; dir < 8; dir++) {
+        int new_x = player->x + dx[dir];
+        int new_y = player->y + dy[dir];
+
+        if (new_x < 0 || new_x >= width || new_y < 0 || new_y >= height)
+            continue;
+
+        int value = game->board[new_y * width + new_x];
+
+        // Evitar moverse a una celda bloqueada
+        if (value > 0 && value <10){
+            if (value > max_value) {
+                max_value = value;
+                best_move = dir;
+            }
+        }
+        else{
+            continue;
+        }
+    }
+    return best_move;
+}
+
+
 int main(int argc, char const *argv[])
 {
     pid_t pid = getpid();
@@ -135,7 +163,7 @@ int main(int argc, char const *argv[])
         //Decidir el siguiente movimiento
 
         // Generar un movimiento aleatorio
-        unsigned char movement = rand() % 8;
+        unsigned char movement = next_movement(game, player, width, height);
 
         //Enviar movimiento
         
@@ -184,6 +212,3 @@ int main(int argc, char const *argv[])
     close(player_pipe[1]);
     return 0;
 }
-
-
-

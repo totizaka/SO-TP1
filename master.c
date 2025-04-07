@@ -414,6 +414,7 @@ int main(int argc, char *argv[]) {
         } else if (ready == 0) {
             // Timeout sin movimientos válidos
             game->game_over = true;
+            sem_post(&sems->view_pending);
             break;
         }
         // sem_wait(&sems->master_mutex); //bloqueo lectura de players antes de procesar y ejecutar movimiento
@@ -456,7 +457,7 @@ int main(int argc, char *argv[]) {
 
         // Respetar el delay configurado
         if(view_path!=NULL){
-            usleep(delay * 1000); // Convertir a microsegundos
+            usleep(delay * 500); // Convertir a microsegundos
         }
     }
     

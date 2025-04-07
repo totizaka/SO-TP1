@@ -18,40 +18,57 @@
 
 // Códigos ANSI para colores
 const char *player_colors[] = {
-    "\033[31m", // Rojo
-    "\033[32m", // Verde
-    "\033[33m", // Amarillo
-    "\033[34m", // Azul
-    "\033[35m", // Magenta
-    "\033[36m", // Cian
-    "\033[91m", // Rojo claro
-    "\033[92m", // Verde claro
-    "\033[93m"  // Amarillo claro
+    "\033[41m", // Fondo rojo
+    "\033[42m", // Fondo verde
+    "\033[43m", // Fondo amarillo
+    "\033[44m", // Fondo azul
+    "\033[45m", // Fondo magenta
+    "\033[46m", // Fondo cian
+    "\033[101m", // Fondo rojo claro
+    "\033[102m", // Fondo verde claro
+    "\033[103m"  // Fondo amarillo claro
 };
+
+// Códigos ANSI para colores de fondo más oscuros (256-color)
+const char *player_bg_colors[] = {
+    "\033[48;5;52m",  // Rojo oscuro
+    "\033[48;5;22m",  // Verde oscuro
+    "\033[48;5;58m",  // Amarillo oscuro (mezcla ocre)
+    "\033[48;5;17m",  // Azul oscuro
+    "\033[48;5;53m",  // Magenta oscuro
+    "\033[48;5;23m",  // Cian oscuro
+    "\033[48;5;88m",  // Rojo vino / más profundo
+    "\033[48;5;22m",  // Verde musgo
+    "\033[48;5;94m"   // Amarillo tierra / dorado apagado
+};
+
 #define RESET_COLOR "\033[0m"
 
 
 void print_game_board(GameMap *game, int width, int height, const char *player_colors[]) {
             
     printf("\nTablero:\n");
+    for (int x = 0; x < width; x++) {
+        printf("-----");
+    }
+    printf("\n");
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             int cell = game->board[y * width + x];
             if (cell < 0) {
                 // Celda capturada por un jugador
-                int player_id = -cell; // Convertir a índice de jugador
-                printf("| -%s%d%s ", player_colors[player_id % 9], player_id, RESET_COLOR);
-            } else if (cell == 0){
-                printf("|  %s%d%s ", player_colors[0], 0, RESET_COLOR);
+                int player_id = -cell;
+                printf("| %s  %s ", player_bg_colors[player_id % 9], RESET_COLOR); // Fondo de color
+            } else if (cell == 0) {
+                printf("| %s  %s ", player_bg_colors[0], RESET_COLOR);
             } else if (cell == 11) {
-                printf("| %s@%s ", player_colors[0], RESET_COLOR);
-            } else if (cell%10 == 0) {
-                //cabeza de serpiente
-                printf("| %s@%s ", player_colors[(cell/10)], RESET_COLOR);
-            } else  {
-                // Celda con recompensa
+                printf("| %s  %s ", player_colors[0], RESET_COLOR);
+            } else if (cell % 10 == 0) {
+                int player_id = cell / 10;
+                printf("| %s  %s ", player_colors[player_id % 9], RESET_COLOR);
+            } else {
                 printf("| %2d ", cell);
-            } 
+            }
         }
         printf("|\n");
         for (int x = 0; x < width; x++) {
@@ -99,9 +116,15 @@ int main(int argc, char const *argv[])
         printf("Jugadores: %u\n", game->num_players);
         
         for (int i = 0; i < game->num_players; i++) {
-            printf("Jugador %d: %s - Puntos: %u - Posición: (%hu, %hu)\n",
+            printf("Jugador %d: %s - Puntos: %u - Posición: (%hu, %hu)\t",
                 i, game->players[i].player_name, game->players[i].points,
                 game->players[i].x, game->players[i].y);
+            if(game->players[i].blocked) {
+                printf("Jugador %d está bloqueado.\n", i);
+            }
+            else {
+                printf("Jugador %d no está bloqueado.\n", i);
+            }
         }
 
     

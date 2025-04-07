@@ -7,16 +7,18 @@ OBJ_GAME = game_structs.o
 # Archivos objeto intermedios
 OBJ_MASTER = master_tmp.o
 OBJ_PLAYER = player_tmp.o
+OBJ_PLAYER2 = player2_tmp.o
 OBJ_VIEW = view_tmp.o
 
 # Ejecutables (con .o como extensión, si así lo querés)
 EXE_MASTER = master.o
 EXE_PLAYER = player.o
+EXE_PLAYER2 = player2.o
 EXE_VIEW = view.o
 
 .PHONY: all clean run
 
-all: $(EXE_MASTER) $(EXE_PLAYER) $(EXE_VIEW)
+all: $(EXE_MASTER) $(EXE_PLAYER) $(EXE_VIEW) $(EXE_PLAYER2)
 
 # Compilar game_structs.c
 $(OBJ_GAME): game_structs.c game_structs.h
@@ -30,6 +32,10 @@ $(OBJ_MASTER): master.c game_structs.h
 $(OBJ_PLAYER): player.c game_structs.h
 	$(CC) $(CFLAGS) -c player.c -o $@
 
+# Compilar player2.c
+$(OBJ_PLAYER2): player2.c game_structs.h
+	$(CC) $(CFLAGS) -c player2.c -o $@
+
 # Compilar view.c
 $(OBJ_VIEW): view.c game_structs.h
 	$(CC) $(CFLAGS) -c view.c -o $@
@@ -40,6 +46,9 @@ $(EXE_MASTER): $(OBJ_MASTER) $(OBJ_GAME)
 
 $(EXE_PLAYER): $(OBJ_PLAYER) $(OBJ_GAME)
 	$(CC) $(CFLAGS) $(OBJ_PLAYER) $(OBJ_GAME) -o $@
+
+$(EXE_PLAYER2): $(OBJ_PLAYER2) $(OBJ_GAME)
+	$(CC) $(CFLAGS) $(OBJ_PLAYER2) $(OBJ_GAME) -o $@
 
 $(EXE_VIEW): $(OBJ_VIEW) $(OBJ_GAME)
 	$(CC) $(CFLAGS) $(OBJ_VIEW) $(OBJ_GAME) -o $@
