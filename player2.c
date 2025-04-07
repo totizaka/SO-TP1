@@ -32,14 +32,12 @@ int next_movement(GameMap *game, Player *player, unsigned short width, unsigned 
         int value = game->board[new_y * width + new_x];
 
         // Evitar moverse a una celda bloqueada
-        if (value > 0 && value <10){
+        if (value < -9) continue;
+        if (value > 0 && value <10) {
             if (value > max_value) {
                 max_value = value;
                 best_move = dir;
             }
-        }
-        else{
-            continue;
         }
     }
     return best_move;
@@ -153,6 +151,9 @@ int main(int argc, char const *argv[])
             break;
         }
 
+        int valid_moves = game->players[player_index].valid_moves;
+        int invalid_moves = game->players[player_index].invalid_moves;
+
         sem_wait(&sems->game_player_mutex);
         if (sems->players_reading == 1){
             sem_post(&sems->game_state_mutex);
@@ -161,14 +162,16 @@ int main(int argc, char const *argv[])
         sem_post(&sems->game_player_mutex);
 
         //Decidir el siguiente movimiento
+        
+        unsigned char movement = next_movement(game, player, width, height);
 
         // Generar un movimiento aleatorio
-        unsigned char movement = next_movement(game, player, width, height);
+        
 
         //Enviar movimiento
         
         // Enviar el movimiento al máster
-        if (game->players[player_index].valid_moves > valid_player_moves[player_index]){
+        if (valid_moves > valid_player_moves[player_index]){
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
                 if (pfd.revents & POLLOUT) {
                     if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
@@ -179,7 +182,7 @@ int main(int argc, char const *argv[])
             }
             valid_player_moves[player_index]++;
         }
-        else if (game->players[player_index].invalid_moves < invalid_player_moves[player_index]){
+        else if (invalid_moves < invalid_player_moves[player_index]){
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
                 if (pfd.revents & POLLOUT) {
                     if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
@@ -190,7 +193,7 @@ int main(int argc, char const *argv[])
             }
             invalid_player_moves[player_index]--;
         }
-        else if (game->players[player_index].valid_moves == game->players[player_index].invalid_moves){
+        else if (valid_moves == invalid_moves && valid_moves == 0){
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
                 if (pfd.revents & POLLOUT) {
                     if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
@@ -200,12 +203,13 @@ int main(int argc, char const *argv[])
                 }
             }
         }
+        usleep(100000);
     }
     
 
     // Liberar recursos
 
-    shm_closer(game, shm_size, sems, shm_state, shm_sync,0);
+    shm_closer(game, shm_size, sems, shm_state, shm_sync, 0);
 
 
     close(player_pipe[0]);

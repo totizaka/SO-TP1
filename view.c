@@ -17,6 +17,19 @@
 
 
 // Códigos ANSI para colores
+
+const char *letters_colors[] = {
+    "\033[31m", // Rojo
+    "\033[32m", // Verde
+    "\033[33m", // Amarillo
+    "\033[34m", // Azul
+    "\033[35m", // Magenta
+    "\033[36m", // Cian
+    "\033[91m", // Rojo claro
+    "\033[92m", // Verde claro
+    "\033[93m"  // Amarillo claro
+};
+
 const char *player_colors[] = {
     "\033[41m", // Fondo rojo
     "\033[42m", // Fondo verde
@@ -116,7 +129,7 @@ int main(int argc, char const *argv[])
         printf("Jugadores: %u\n", game->num_players);
         
         for (int i = 0; i < game->num_players; i++) {
-            printf("Jugador %d: %s - Puntos: %u - Posición: (%hu, %hu)\t",
+            printf("%sJugador%s %d: %s - Puntos: %u - Posición: (%hu, %hu)\t", letters_colors[i % 9], RESET_COLOR,
                 i, game->players[i].player_name, game->players[i].points,
                 game->players[i].x, game->players[i].y);
             if(game->players[i].blocked) {

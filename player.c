@@ -125,6 +125,8 @@ int main(int argc, char const *argv[])
             break;
         }
 
+        
+
         sem_wait(&sems->game_player_mutex);
         if (sems->players_reading == 1){
             sem_post(&sems->game_state_mutex);
@@ -135,7 +137,9 @@ int main(int argc, char const *argv[])
         //Decidir el siguiente movimiento
 
         // Generar un movimiento aleatorio
+
         unsigned char movement = rand() % 8;
+        
 
         //Enviar movimiento
         

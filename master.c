@@ -457,7 +457,7 @@ int main(int argc, char *argv[]) {
 
         // Respetar el delay configurado
         if(view_path!=NULL){
-            usleep(delay * 500); // Convertir a microsegundos
+            usleep(delay * 2000); // Convertir a microsegundos
         }
     }
     
