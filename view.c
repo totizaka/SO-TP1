@@ -19,40 +19,39 @@
 // Códigos ANSI para colores
 
 const char *letters_colors[] = {
-    "\033[31m", // Rojo
-    "\033[32m", // Verde
-    "\033[33m", // Amarillo
-    "\033[34m", // Azul
-    "\033[35m", // Magenta
-    "\033[36m", // Cian
-    "\033[91m", // Rojo claro
-    "\033[92m", // Verde claro
-    "\033[93m"  // Amarillo claro
+    "\033[38;5;196m", // Rojo flúo
+    "\033[38;5;46m",  // Verde brillante
+    "\033[38;5;27m",  // Azul eléctrico
+    "\033[38;5;226m", // Amarillo flúo
+    "\033[38;5;165m", // Violeta fuerte
+    "\033[38;5;208m", // Naranja brillante
+    "\033[38;5;213m", // Rosa vibrante
+    "\033[38;5;15m",  // Blanco puro
+    "\033[38;5;51m"   // Celeste eléctrico
 };
 
-const char *player_colors[] = {
-    "\033[41m", // Fondo rojo
-    "\033[42m", // Fondo verde
-    "\033[43m", // Fondo amarillo
-    "\033[44m", // Fondo azul
-    "\033[45m", // Fondo magenta
-    "\033[46m", // Fondo cian
-    "\033[101m", // Fondo rojo claro
-    "\033[102m", // Fondo verde claro
-    "\033[103m"  // Fondo amarillo claro
+const char *player_head_colors[] = {
+    "\033[48;5;196m",  // Rojo flúo
+    "\033[48;5;46m",   // Verde brillante
+    "\033[48;5;27m",   // Azul eléctrico
+    "\033[48;5;226m",  // Amarillo flúo
+    "\033[48;5;165m",  // Violeta fuerte (más violeta que 201)
+    "\033[48;5;214m",  // Naranja brillante
+    "\033[48;5;213m",  // Rosa vibrante
+    "\033[48;5;15m",   // Blanco puro
+    "\033[48;5;51m"    // Celeste eléctrico
 };
 
-// Códigos ANSI para colores de fondo más oscuros (256-color)
-const char *player_bg_colors[] = {
-    "\033[48;5;52m",  // Rojo oscuro
-    "\033[48;5;22m",  // Verde oscuro
-    "\033[48;5;58m",  // Amarillo oscuro (mezcla ocre)
-    "\033[48;5;17m",  // Azul oscuro
-    "\033[48;5;53m",  // Magenta oscuro
-    "\033[48;5;23m",  // Cian oscuro
-    "\033[48;5;88m",  // Rojo vino / más profundo
-    "\033[48;5;22m",  // Verde musgo
-    "\033[48;5;94m"   // Amarillo tierra / dorado apagado
+const char *player_tail_colors[] = {
+    "\033[48;5;52m",   // Rojo oscuro
+    "\033[48;5;22m",   // Verde musgo
+    "\033[48;5;18m",   // Azul muy oscuro
+    "\033[48;5;100m",  // Amarillo más oscuro pero no naranja
+    "\033[48;5;54m",   // Violeta oscuro
+    "\033[48;5;130m",  // Naranja tierra
+    "\033[48;5;125m",  // Rosa viejo
+    "\033[48;5;240m",  // Gris medio oscuro
+    "\033[48;5;25m"    // Celeste oscuro
 };
 
 #define RESET_COLOR "\033[0m"
@@ -62,7 +61,7 @@ void print_game_board(GameMap *game, int width, int height, const char *player_c
             
     printf("\nTablero:\n");
     for (int x = 0; x < width; x++) {
-        printf("-----");
+        printf("---");
     }
     printf("\n");
     for (int y = 0; y < height; y++) {
@@ -71,21 +70,21 @@ void print_game_board(GameMap *game, int width, int height, const char *player_c
             if (cell < 0) {
                 // Celda capturada por un jugador
                 int player_id = -cell;
-                printf("| %s  %s ", player_bg_colors[player_id % 9], RESET_COLOR); // Fondo de color
+                printf("|%s  %s", player_tail_colors[player_id % 9], RESET_COLOR); // Fondo de color
             } else if (cell == 0) {
-                printf("| %s  %s ", player_bg_colors[0], RESET_COLOR);
+                printf("|%s  %s", player_tail_colors[0], RESET_COLOR);
             } else if (cell == 11) {
-                printf("| %s  %s ", player_colors[0], RESET_COLOR);
+                printf("|%s  %s", player_colors[0], RESET_COLOR);
             } else if (cell % 10 == 0) {
                 int player_id = cell / 10;
-                printf("| %s  %s ", player_colors[player_id % 9], RESET_COLOR);
+                printf("|%s  %s", player_colors[player_id % 9], RESET_COLOR);
             } else {
-                printf("| %2d ", cell);
+                printf("|%2d", cell);
             }
         }
         printf("|\n");
         for (int x = 0; x < width; x++) {
-            printf("-----");
+            printf("---");
         }
         printf("\n");
         
@@ -125,24 +124,22 @@ int main(int argc, char const *argv[])
         //IMPRESION
 
         // Imprimir estado
-        printf("Tablero de %dx%d\n", game->width, game->height);
+        printf("\nTablero de %dx%d\n", game->width, game->height);
         printf("Jugadores: %u\n", game->num_players);
         
         for (int i = 0; i < game->num_players; i++) {
-            printf("%sJugador%s %d: %s - Puntos: %u - Posición: (%hu, %hu)\t", letters_colors[i % 9], RESET_COLOR,
-                i, game->players[i].player_name, game->players[i].points,
+            printf("%sJugador %2d:%s %-15s - Puntos: %3u - Posición: (%2hu, %2hu)\t", 
+                letters_colors[i % 9], i, RESET_COLOR,
+                game->players[i].player_name,
+                game->players[i].points,
                 game->players[i].x, game->players[i].y);
-            if(game->players[i].blocked) {
-                printf("Jugador %d está bloqueado.\n", i);
-            }
-            else {
-                printf("Jugador %d no está bloqueado.\n", i);
-            }
+        
+            printf("\tJugador %d %s\n", i, game->players[i].blocked ? "está bloqueado." : "no está bloqueado.");
         }
 
     
         // Imprimir Tablero
-        print_game_board(game, width, height, player_colors);        
+        print_game_board(game, width, height, player_head_colors);        
         //Seguimos
         sem_post(&sems->view_done);
         }

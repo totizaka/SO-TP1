@@ -55,8 +55,16 @@ typedef struct {
 extern const int dx[8];  // Solo declaración
 extern const int dy[8];  // Solo declaración
 
+//Funciones de manejo de memoria compartida
+
+
+// shm_handler: Maneja la creación y apertura de memoria compartida
 int shm_handler(char *name, int flag, mode_t mode,const char *desc, int auth_flag, const char *to_clean);
+
+// shm_map: Mapea la memoria compartida a la dirección de memoria del proceso
 void *shm_map(int fd, size_t size, int prot, const char *desc);
+
+// shm_closer: Cierra y libera la memoria compartida y los semáforos
 void shm_closer(GameMap *game, size_t game_size, Semaphores *sems, int shm_state, int shm_sync, int auth_flag);
 
 #endif

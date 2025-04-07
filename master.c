@@ -442,11 +442,6 @@ int main(int argc, char *argv[]) {
                     } else {
                         game->players[i].invalid_moves++;
                         game->players[i].blocked = block_player(game,i);// Bloquear al jugador si no hay movimientos válidos
-                        
-                        if(game->players[i].blocked){
-                            printf("Bloqueo del jugador %d (%s)\n", i, game->players[i].player_name);
-                        }
-                             
                     }
                 }
                 sem_post(&sems->game_state_mutex);
@@ -457,7 +452,7 @@ int main(int argc, char *argv[]) {
 
         // Respetar el delay configurado
         if(view_path!=NULL){
-            usleep(delay * 2000); // Convertir a microsegundos
+            usleep(delay * 500); // Convertir a microsegundos
         }
     }
     
@@ -535,6 +530,12 @@ int main(int argc, char *argv[]) {
 
     // Liberar recursos
 
+    // Cerrar pipes de los jugadores
+    for (int i = 0; i < num_players; i++) {
+        close(player_pipes[i][0]); // Cerrar extremo de lectura del pipe
+        close(player_pipes[i][1]); // Cerrar extremo de escritura del pipe
+    }
+    // Cerrar memoria compartida
     shm_closer(game,  sizeof(GameMap) + ( game->width * game->height * sizeof(int) ),sems,shm_state,shm_sync,1);
 
 

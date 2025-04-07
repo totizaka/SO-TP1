@@ -45,18 +45,11 @@ int main(int argc, char const *argv[])
     GameMap *game = shm_map(shm_state, shm_size, PROT_READ, "shm_state");
     Semaphores *sems = shm_map(shm_sync, sizeof(Semaphores), PROT_READ | PROT_WRITE, "shm_sync");
 
-
-    int player_pipe[2];
-    if (pipe(player_pipe) == -1) {
-        perror("Error creando el pipe");
-
-        shm_closer(game, shm_size, sems, shm_state, shm_sync,0);
-        exit(EXIT_FAILURE);
-    }
-
+    // Validar si hubo movimiento
     int valid_player_moves[9] = {0};
     int invalid_player_moves[9] = {0};
 
+    // Para el write del jugador
     struct pollfd pfd;
     pfd.fd = STDOUT_FILENO;
     pfd.events = POLLOUT; // Esperar a que el pipe esté listo para escribir
@@ -136,14 +129,11 @@ int main(int argc, char const *argv[])
 
         //Decidir el siguiente movimiento
 
-        // Generar un movimiento aleatorio
-
         unsigned char movement = rand() % 8;
         
-
-        //Enviar movimiento
         
         // Enviar el movimiento al máster
+
         if (game->players[player_index].valid_moves > valid_player_moves[player_index]){
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
                 if (pfd.revents & POLLOUT) {
@@ -155,7 +145,7 @@ int main(int argc, char const *argv[])
             }
             valid_player_moves[player_index]++;
         }
-        else if (game->players[player_index].invalid_moves < invalid_player_moves[player_index]){
+        else if (game->players[player_index].invalid_moves > invalid_player_moves[player_index]){
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
                 if (pfd.revents & POLLOUT) {
                     if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
@@ -164,7 +154,7 @@ int main(int argc, char const *argv[])
                     }
                 }
             }
-            invalid_player_moves[player_index]--;
+            invalid_player_moves[player_index]++;
         }
         else if (game->players[player_index].valid_moves == game->players[player_index].invalid_moves){
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
@@ -182,10 +172,6 @@ int main(int argc, char const *argv[])
     // Liberar recursos
 
     shm_closer(game, shm_size, sems, shm_state, shm_sync,0);
-
-
-    close(player_pipe[0]);
-    close(player_pipe[1]);
     return 0;
 }
 

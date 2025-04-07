@@ -83,6 +83,7 @@ int main(int argc, char const *argv[])
     int valid_player_moves[9] = {0};
     int invalid_player_moves[9] = {0};
 
+    
     struct pollfd pfd;
     pfd.fd = STDOUT_FILENO;
     pfd.events = POLLOUT; // Esperar a que el pipe esté listo para escribir
@@ -154,6 +155,8 @@ int main(int argc, char const *argv[])
         int valid_moves = game->players[player_index].valid_moves;
         int invalid_moves = game->players[player_index].invalid_moves;
 
+        unsigned char movement = next_movement(game, player, width, height);
+
         sem_wait(&sems->game_player_mutex);
         if (sems->players_reading == 1){
             sem_post(&sems->game_state_mutex);
@@ -163,7 +166,7 @@ int main(int argc, char const *argv[])
 
         //Decidir el siguiente movimiento
         
-        unsigned char movement = next_movement(game, player, width, height);
+        
 
         // Generar un movimiento aleatorio
         
@@ -182,7 +185,7 @@ int main(int argc, char const *argv[])
             }
             valid_player_moves[player_index]++;
         }
-        else if (invalid_moves < invalid_player_moves[player_index]){
+        else if (invalid_moves > invalid_player_moves[player_index]){
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
                 if (pfd.revents & POLLOUT) {
                     if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
@@ -191,7 +194,7 @@ int main(int argc, char const *argv[])
                     }
                 }
             }
-            invalid_player_moves[player_index]--;
+            invalid_player_moves[player_index]++;
         }
         else if (valid_moves == invalid_moves && valid_moves == 0){
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
