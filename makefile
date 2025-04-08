@@ -1,58 +1,64 @@
-# Variables
+# Compilador y flags
 CC = gcc
 CFLAGS = -Wall -g -fsanitize=address
 
+# Archivos objeto comunes
 OBJ_GAME = game_structs.o
 
-# Archivos objeto intermedios
-OBJ_MASTER = master_tmp.o
-OBJ_PLAYER = player_tmp.o
-OBJ_PLAYER2 = player2_tmp.o
-OBJ_VIEW = view_tmp.o
+# Archivos fuente
+SRC_MASTER = master.c
+SRC_PLAYER = player.c
+SRC_PLAYER2 = player2.c
+SRC_VIEW = view.c
 
-# Ejecutables (con .o como extensión, si así lo querés)
-EXE_MASTER = master.o
-EXE_PLAYER = player.o
-EXE_PLAYER2 = player2.o
-EXE_VIEW = view.o
+# Archivos objeto
+OBJ_MASTER = master.o
+OBJ_PLAYER = player.o
+OBJ_PLAYER2 = player2.o
+OBJ_VIEW = view.o
 
+# Ejecutables
+EXE_MASTER = master
+EXE_PLAYER = player
+EXE_PLAYER2 = player2
+EXE_VIEW = view
+
+# Targets principales
 .PHONY: all clean run
 
-all: $(EXE_MASTER) $(EXE_PLAYER) $(EXE_VIEW) $(EXE_PLAYER2)
+all: $(EXE_MASTER) $(EXE_PLAYER) $(EXE_PLAYER2) $(EXE_VIEW)
 
 # Compilar game_structs.c
 $(OBJ_GAME): game_structs.c game_structs.h
-	$(CC) $(CFLAGS) -c game_structs.c -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
-# Compilar master.c
-$(OBJ_MASTER): master.c game_structs.h
-	$(CC) $(CFLAGS) -c master.c -o $@
+# Compilar y generar objetos
+$(OBJ_MASTER): $(SRC_MASTER) game_structs.h
+	$(CC) $(CFLAGS) -c $< -o $@
 
-# Compilar player.c
-$(OBJ_PLAYER): player.c game_structs.h
-	$(CC) $(CFLAGS) -c player.c -o $@
+$(OBJ_PLAYER): $(SRC_PLAYER) game_structs.h
+	$(CC) $(CFLAGS) -c $< -o $@
 
-# Compilar player2.c
-$(OBJ_PLAYER2): player2.c game_structs.h
-	$(CC) $(CFLAGS) -c player2.c -o $@
+$(OBJ_PLAYER2): $(SRC_PLAYER2) game_structs.h
+	$(CC) $(CFLAGS) -c $< -o $@
 
-# Compilar view.c
-$(OBJ_VIEW): view.c game_structs.h
-	$(CC) $(CFLAGS) -c view.c -o $@
+$(OBJ_VIEW): $(SRC_VIEW) game_structs.h
+	$(CC) $(CFLAGS) -c $< -o $@
 
 # Enlazar ejecutables
 $(EXE_MASTER): $(OBJ_MASTER) $(OBJ_GAME)
-	$(CC) $(CFLAGS) $(OBJ_MASTER) $(OBJ_GAME) -o $@
+	$(CC) $(CFLAGS) $^ -o $@
 
 $(EXE_PLAYER): $(OBJ_PLAYER) $(OBJ_GAME)
-	$(CC) $(CFLAGS) $(OBJ_PLAYER) $(OBJ_GAME) -o $@
+	$(CC) $(CFLAGS) $^ -o $@
 
 $(EXE_PLAYER2): $(OBJ_PLAYER2) $(OBJ_GAME)
-	$(CC) $(CFLAGS) $(OBJ_PLAYER2) $(OBJ_GAME) -o $@
+	$(CC) $(CFLAGS) $^ -o $@
 
 $(EXE_VIEW): $(OBJ_VIEW) $(OBJ_GAME)
-	$(CC) $(CFLAGS) $(OBJ_VIEW) $(OBJ_GAME) -o $@
+	$(CC) $(CFLAGS) $^ -o $@
 
+# Correr el master con los jugadores
 run: all
 	@if [ -z "$(PLAYER_PATH)" ]; then \
 		echo "Por favor, especifica el path de los jugadores con 'make run PLAYER_PATH=\"path1 path2 ...\"'"; \
@@ -60,7 +66,7 @@ run: all
 	fi
 	./$(EXE_MASTER) -v ./$(EXE_VIEW) -p $(PLAYER_PATH)
 
+# Limpiar todo
 clean:
-	rm -f *.o *_tmp.o
-
+	rm -f *.o $(EXE_MASTER) $(EXE_PLAYER) $(EXE_PLAYER2) $(EXE_VIEW)
 

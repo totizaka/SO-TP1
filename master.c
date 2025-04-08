@@ -365,8 +365,6 @@ void create_player_processes(GameMap *game, Semaphores *sems, int shm_state, int
 }
 bool check_timeout(time_t start_time, int timeout, GameMap *game, Semaphores *sems){
     if (time(NULL) - start_time > timeout) {
-        game->game_over = true;
-        sem_post(&sems->view_pending);
         return true;
     }
     return false;
@@ -455,6 +453,9 @@ int main(int argc, char *argv[]) {
 
         // Verificar timeout
         if (check_timeout(start_time, timeout,game, sems)) {
+            game->game_over = true;
+            //Para que la vista termine
+            sem_post(&sems->view_pending);
             break;
         }
 
@@ -526,7 +527,7 @@ int main(int argc, char *argv[]) {
         // sem_post(&sems->game_state_mutex);
         // Respetar el delay configurado
         if(view_path!=NULL){
-            usleep(delay * 500); // Convertir a microsegundos
+            usleep(delay * 500);
         }
 
     }
@@ -540,10 +541,11 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < num_players; i++) {
         char desc[64];
         snprintf(desc, sizeof(desc), "del jugador %d (%s)", i, game->players[i].player_name);
-        wait_for_process(game->players[i].pid,desc );
+        wait_for_process(game->players[i].pid, desc);
     }
 
     print_game_ending(game, num_players);
+    
     // Liberar recursos
 
     // Cerrar pipes de los jugadores

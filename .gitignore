@@ -1,6 +1,12 @@
 # Prerequisites
 *.d
 
+# Ejecutables (agregalos si querés ignorarlos también)
+master
+player
+player2
+view
+
 # Object files
 *.o
 *.ko
