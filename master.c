@@ -156,7 +156,58 @@ void parse_arguments(int argc, char *argv[], unsigned int *delay, unsigned int *
         exit(EXIT_FAILURE);
     }
 }
+void print_game_ending(GameMap *game, int num_players){
 
+    // Imprimir resumen final del juego
+    printf("\n=== Resumen del juego ===\n\n");
+
+    unsigned int max_points = 0;
+    int winner_index = -1;
+    bool tie = false;
+
+    // Imprimir resumen de cada jugador
+    for (int i = 0; i < num_players; i++) {
+        printf("Jugador %d (%s): %u puntos / %d mov invalidos / %d mov validos\n", i, game->players[i].player_name, game->players[i].points, game->players[i].invalid_moves, game->players[i].valid_moves);
+        if (game->players[i].points > max_points) {
+            max_points = game->players[i].points;
+            winner_index = i;
+            tie = false;
+        } else if (game->players[i].points == max_points) {
+            int current_invalid = game->players[i].invalid_moves;
+            int winner_invalid = game->players[winner_index].invalid_moves;
+    
+            if (current_invalid < winner_invalid) {
+                winner_index = i;
+                tie = false;
+            } else if (current_invalid == winner_invalid) {
+                int current_valid = game->players[i].valid_moves;
+                int winner_valid = game->players[winner_index].valid_moves;
+    
+                if (current_valid < winner_valid) {
+                    winner_index = i;
+                    tie = false;
+                } else if (current_valid == winner_valid) {
+                    tie = true;
+                }
+            } else {
+                tie = true;
+            }
+        }
+    }
+
+    if (tie && max_points > 0) {
+        printf("\n¡Hay un empate entre jugadores con %u puntos y mismos criterios de desempate!\n", max_points);
+    } else if (winner_index != -1) {
+        printf("\n¡El ganador es el Jugador %d!!! (%s) con %u puntos / %d movimientos invalidos / %d movimientos validos\n",
+               winner_index,
+               game->players[winner_index].player_name,
+               max_points,
+               game->players[winner_index].invalid_moves,
+               game->players[winner_index].valid_moves);
+    } else {
+        printf("\nNo hay ganador.\n");
+    }
+}
 
 void create_shared_memory(int width, int height, int *shm_state, int *shm_sync, GameMap **game, Semaphores **sems) {
     size_t shm_size = sizeof(GameMap) + (width * height * sizeof(int));
@@ -312,6 +363,46 @@ void create_player_processes(GameMap *game, Semaphores *sems, int shm_state, int
         game->players[i].pid = player_pid;
     }
 }
+bool check_timeout(time_t start_time, int timeout, GameMap *game, Semaphores *sems){
+    if (time(NULL) - start_time > timeout) {
+        game->game_over = true;
+        sem_post(&sems->view_pending);
+        return true;
+    }
+    return false;
+
+}
+
+
+bool players_all_blocked(GameMap *game, int num_players){
+    for (int i = 0; i < num_players; i++) {
+        if (!game->players[i].blocked) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void set_reading_pipes(fd_set *read_fds, int *max_fd, GameMap *game, int player_pipes[][2], int num_players){
+    for (int i = 0; i < num_players; i++) {
+        if (!game->players[i].blocked) {
+            FD_SET(player_pipes[i][0], read_fds);
+            if (player_pipes[i][0] > *max_fd) {
+                *max_fd = player_pipes[i][0];
+            }
+        }
+    }
+}
+
+void wait_for_process(pid_t pid, const char *desc) {
+    int status;
+    waitpid(pid, &status, 0);
+    if (WIFEXITED(status)) {
+        printf("El proceso %s terminó con código de salida %d.\n", desc, WEXITSTATUS(status));
+    } else {
+        printf("El proceso %s no terminó correctamente.\n", desc);
+    }
+}
 
 
 int main(int argc, char *argv[]) {
@@ -363,20 +454,11 @@ int main(int argc, char *argv[]) {
     while (!game->game_over) {
 
         // Verificar timeout
-        if (time(NULL) - start_time > timeout) {
-            game->game_over = true;
-            //Para que la vista termine
-            sem_post(&sems->view_pending);
+        if (check_timeout(start_time, timeout,game, sems)) {
             break;
         }
 
-        int players_blocked = 0;
-        for (int i = 0; i < num_players; i++){
-            if(game->players[i].blocked){
-                players_blocked+=1;
-            }
-        }
-        if (players_blocked == num_players){
+        if (players_all_blocked(game, num_players)){
             game->game_over = true;
             //Para que la vista termine
             sem_post(&sems->view_pending);
@@ -395,14 +477,7 @@ int main(int argc, char *argv[]) {
         // Configurar los pipes para lectura 
         FD_ZERO(&read_fds);
         int max_fd = -1;
-        for (int i = 0; i < num_players; i++) {
-            if (!game->players[i].blocked) {
-                FD_SET(player_pipes[i][0], &read_fds);
-                if (player_pipes[i][0] > max_fd) {
-                    max_fd = player_pipes[i][0];
-                }
-            }
-        }
+        set_reading_pipes(&read_fds, &max_fd, game, player_pipes, num_players);
 
 
         // Esperar solicitudes de movimientos
@@ -449,85 +524,26 @@ int main(int argc, char *argv[]) {
         }
         
         // sem_post(&sems->game_state_mutex);
-
         // Respetar el delay configurado
         if(view_path!=NULL){
             usleep(delay * 500); // Convertir a microsegundos
         }
+
     }
-    
-    unsigned int max_points = 0;
-    int winner_index = -1;
-    bool tie = false;
-    
 
     // Esperar a que la view termine
     if(view_path!=NULL){
-        int viewStatus;
-        waitpid(viewPid, &viewStatus, 0);
-        if (WIFEXITED(viewStatus)) {
-            printf("El proceso de vista terminó con código de salida %d.\n", WEXITSTATUS(viewStatus));
-        } else {
-            printf("El proceso de vista no terminó correctamente.\n");
-        }
+        wait_for_process(viewPid, "de vista");
     }
 
     // Esperar a que los procesos hijo terminen
     for (int i = 0; i < num_players; i++) {
-        int status;
-        waitpid(game->players[i].pid, &status, 0);
-
-        if(WIFEXITED(status)) {
-            printf("El proceso del jugador %d (%s) terminó con código de salida %d.\n", i, game->players[i].player_name, WEXITSTATUS(status));
-        } else {
-            printf("El proceso del jugador %d (%s) no terminó correctamente.\n", i, game->players[i].player_name);
-        }
-    }
-    // Imprimir resumen final del juego
-    printf("\n=== Resumen del juego ===\n\n");
-    // Imprimir resumen de cada jugador
-    for (int i = 0; i < num_players; i++) {
-        printf("Jugador %d (%s): %u puntos / %d mov invalidos / %d mov validos\n", i, game->players[i].player_name, game->players[i].points, game->players[i].invalid_moves, game->players[i].valid_moves);
-        if (game->players[i].points > max_points) {
-            max_points = game->players[i].points;
-            winner_index = i;
-            tie = false;
-        } else if (game->players[i].points == max_points) {
-            int current_invalid = game->players[i].invalid_moves;
-            int winner_invalid = game->players[winner_index].invalid_moves;
-    
-            if (current_invalid < winner_invalid) {
-                winner_index = i;
-                tie = false;
-            } else if (current_invalid == winner_invalid) {
-                int current_valid = game->players[i].valid_moves;
-                int winner_valid = game->players[winner_index].valid_moves;
-    
-                if (current_valid < winner_valid) {
-                    winner_index = i;
-                    tie = false;
-                } else if (current_valid == winner_valid) {
-                    tie = true;
-                }
-            } else {
-                tie = true;
-            }
-        }
-    }
-    
-    if (tie && max_points > 0) {
-        printf("\n¡Hay un empate entre jugadores con %u puntos y mismos criterios de desempate!\n", max_points);
-    } else if (winner_index != -1) {
-        printf("\n¡El ganador es el Jugador %d!!! (%s) con %u puntos / %d movimientos invalidos / %d movimientos validos\n",
-               winner_index,
-               game->players[winner_index].player_name,
-               max_points,
-               game->players[winner_index].invalid_moves,
-               game->players[winner_index].valid_moves);
-    } else {
-        printf("\nNo hay ganador.\n");
+        char desc[64];
+        snprintf(desc, sizeof(desc), "del jugador %d (%s)", i, game->players[i].player_name);
+        wait_for_process(game->players[i].pid,desc );
     }
 
+    print_game_ending(game, num_players);
     // Liberar recursos
 
     // Cerrar pipes de los jugadores
