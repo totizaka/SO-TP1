@@ -43,6 +43,17 @@ int next_movement(GameMap *game, Player *player, unsigned short width, unsigned 
     return best_move;
 }
 
+int get_player_index(GameMap* game){
+    int player_index = -1;
+        pid_t pid = getpid();
+        for (int i = 0; i < game->num_players; i++) {
+            if (game->players[i].pid == pid) {
+                return i;
+            }
+        }
+        return player_index;
+}
+
 
 int main(int argc, char const *argv[])
 {
@@ -113,16 +124,8 @@ int main(int argc, char const *argv[])
         }
     
         // Determinar el índice del jugador basado en su PID
-        int player_index = -1;
-        pid_t pid = getpid();
-        for (int i = 0; i < game->num_players; i++) {
-            if (game->players[i].pid == pid) {
-                player_index = i;
-                break;
-            }
-        }
-    
-        if (player_index == -1) {
+        int player_index=get_player_index(game);
+        if (player_index== -1) {
             fprintf(stderr, "Error: No se encontró el jugador con PID %d en la lista de jugadores.\n", pid);
 
             sem_wait(&sems->game_player_mutex);
@@ -160,6 +163,10 @@ int main(int argc, char const *argv[])
             player_x = player->x;
             player_y = player->y;
         }
+        
+        //Decidir el siguiente movimiento
+        
+        unsigned char movement = next_movement(game, player, width, height);
 
         
         sem_wait(&sems->game_player_mutex);
@@ -169,9 +176,6 @@ int main(int argc, char const *argv[])
         sems->players_reading-=1;
         sem_post(&sems->game_player_mutex);
 
-        //Decidir el siguiente movimiento
-        
-        unsigned char movement = next_movement(game, player, width, height);
 
         //Enviar movimiento
 

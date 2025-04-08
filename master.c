@@ -370,13 +370,13 @@ int main(int argc, char *argv[]) {
             break;
         }
 
-        int amountBlocked = 0;
+        int players_blocked = 0;
         for (int i = 0; i < num_players; i++){
             if(game->players[i].blocked){
-                amountBlocked+=1;
+                players_blocked+=1;
             }
         }
-        if (amountBlocked == num_players){
+        if (players_blocked == num_players){
             game->game_over = true;
             //Para que la vista termine
             sem_post(&sems->view_pending);
@@ -431,11 +431,11 @@ int main(int argc, char *argv[]) {
                 sem_wait(&sems->game_state_mutex);
                 sem_post(&sems->master_mutex);
 
-                if (bytes_read == 0) {                          //preguntar
+               /* if (bytes_read == 0) {                          //preguntar, creo q no es necesario!!
                     // Jugador bloqueado (EOF)
                     game->players[i].blocked = true;
                     printf("lo bloquie\n"); 
-                } else if (bytes_read > 0) {
+                } else*/ if (bytes_read > 0) {
                     if (validate_move(game, i, move)) {
                         apply_move(game, i, move);
                         start_time = time(NULL); // Reiniciar timeout
