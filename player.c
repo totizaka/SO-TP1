@@ -45,9 +45,10 @@ int main(int argc, char const *argv[])
     GameMap *game = shm_map(shm_state, shm_size, PROT_READ, "shm_state");
     Semaphores *sems = shm_map(shm_sync, sizeof(Semaphores), PROT_READ | PROT_WRITE, "shm_sync");
 
-    // Validar si hubo movimiento
-    int valid_player_moves[9] = {0};
-    int invalid_player_moves[9] = {0};
+    int valid_moves = 0;
+    int invalid_moves = 0;
+
+    int sendMovement = 0;
 
     // Para el write del jugador
     struct pollfd pfd;
@@ -118,6 +119,14 @@ int main(int argc, char const *argv[])
             break;
         }
 
+        if (player->invalid_moves > invalid_moves){
+            invalid_moves = player->invalid_moves;
+            sendMovement = 1;
+        }
+        if (player->valid_moves > valid_moves){
+            valid_moves = player->valid_moves;
+            sendMovement = 1;
+        }
         
 
         sem_wait(&sems->game_player_mutex);
@@ -128,41 +137,30 @@ int main(int argc, char const *argv[])
         sem_post(&sems->game_player_mutex);
 
         //Decidir el siguiente movimiento
-
-        unsigned char movement = rand() % 8;
         
+        unsigned char movement = rand() % 8;
         
         // Enviar el movimiento al máster
 
-        if (game->players[player_index].valid_moves > valid_player_moves[player_index]){
+        if (sendMovement == 0 && valid_moves == 0 && invalid_moves == 0) {
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
                 if (pfd.revents & POLLOUT) {
                     if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
                         perror("Error al escribir en el pipe");
                         break;
                     }
+                    sendMovement = 0;
                 }
             }
-            valid_player_moves[player_index]++;
         }
-        else if (game->players[player_index].invalid_moves > invalid_player_moves[player_index]){
+        else if (sendMovement == 1) {
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
                 if (pfd.revents & POLLOUT) {
                     if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
                         perror("Error al escribir en el pipe");
                         break;
                     }
-                }
-            }
-            invalid_player_moves[player_index]++;
-        }
-        else if (game->players[player_index].valid_moves == game->players[player_index].invalid_moves){
-            if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
-                if (pfd.revents & POLLOUT) {
-                    if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
-                        perror("Error al escribir en el pipe");
-                        break;
-                    }
+                    sendMovement=0;
                 }
             }
         }
