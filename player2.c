@@ -85,6 +85,8 @@ int main(int argc, char const *argv[])
 
     int sendMovements = 0;
 
+    int invalid_moves=0;
+
     int player_x = 0;
     int player_y = 0;
 
@@ -163,6 +165,9 @@ int main(int argc, char const *argv[])
             player_x = player->x;
             player_y = player->y;
         }
+
+        int state_invalid_moves = player->invalid_moves;
+        
         
         //Decidir el siguiente movimiento
         
@@ -179,7 +184,7 @@ int main(int argc, char const *argv[])
 
         //Enviar movimiento
 
-        if (hasMove==0 && sendMovements == 0) {
+        if ((hasMove == 0 && sendMovements == 0) || (hasMove == 1)) {
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
                 if (pfd.revents & POLLOUT) {
                     if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
@@ -191,7 +196,7 @@ int main(int argc, char const *argv[])
                 }
             }
         }
-        else if (hasMove==1) {
+        else if (hasMove == 0 && state_invalid_moves > invalid_moves){
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
                 if (pfd.revents & POLLOUT) {
                     if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
@@ -199,7 +204,8 @@ int main(int argc, char const *argv[])
                         break;
                     }
                     sendMovements+=1;
-                    hasMove=0;
+                    invalid_moves = state_invalid_moves;
+                    hasMove = 0;
                 }
             }
         }

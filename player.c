@@ -128,6 +128,8 @@ int main(int argc, char const *argv[])
             sendMovement = 1;
         }
         
+        unsigned char movement = rand() % 8;
+
 
         sem_wait(&sems->game_player_mutex);
         if (sems->players_reading == 1){
@@ -138,7 +140,7 @@ int main(int argc, char const *argv[])
 
         //Decidir el siguiente movimiento
         
-        unsigned char movement = rand() % 8;
+        
         
         // Enviar el movimiento al máster
 
