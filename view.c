@@ -122,7 +122,7 @@ int main(int argc, char const *argv[])
         sem_wait(&sems->view_pending);
 
         //IMPRESION
-
+        
         // Imprimir estado
         printf("\nTablero de %dx%d\n", game->width, game->height);
         printf("Jugadores: %u\n", game->num_players);

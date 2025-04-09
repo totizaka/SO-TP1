@@ -68,5 +68,5 @@ run: all
 
 # Limpiar todo
 clean:
-	rm -f *.o $(EXE_MASTER) $(EXE_PLAYER) $(EXE_PLAYER2) $(EXE_VIEW)
+	rm -f *.o $(EXE_MASTER) $(EXE_PLAYER) $(EXE_PLAYER2) $(EXE_VIEW) 
 

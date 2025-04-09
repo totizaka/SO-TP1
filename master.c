@@ -449,6 +449,11 @@ int main(int argc, char *argv[]) {
     // Bucle principal del máster
     time_t start_time = time(NULL);
     fd_set read_fds;
+
+    // Para el round robin
+    int index=0;
+    int start=0;
+    
     while (!game->game_over) {
 
         // Verificar timeout
@@ -498,32 +503,37 @@ int main(int argc, char *argv[]) {
         // sem_post(&sems->master_mutex);
         // Procesar movimientos
         for (int i = 0; i < num_players; i++) {
-            if (FD_ISSET(player_pipes[i][0], &read_fds)) {
+
+            index = (start+i)%num_players;
+
+            if (FD_ISSET(player_pipes[index][0], &read_fds)) {
                 unsigned char move;
                 int bytes_read;
-                bytes_read = read(player_pipes[i][0], &move, sizeof(move));
+                bytes_read = read(player_pipes[index][0], &move, sizeof(move));
 
                 sem_wait(&sems->master_mutex); 
                 sem_wait(&sems->game_state_mutex);
                 sem_post(&sems->master_mutex);
 
-               /* if (bytes_read == 0) {                          //preguntar, creo q no es necesario!!
+               if (bytes_read == 0) {                          //preguntar, creo q no es necesario!!
                     // Jugador bloqueado (EOF)
                     game->players[i].blocked = true;
                     printf("lo bloquie\n"); 
-                } else*/ if (bytes_read > 0) {
-                    if (validate_move(game, i, move)) {
-                        apply_move(game, i, move);
+                } else if (bytes_read > 0) {
+                    if (validate_move(game, index, move)) {
+                        apply_move(game, index, move);
                         start_time = time(NULL); // Reiniciar timeout
                     } else {
-                        game->players[i].invalid_moves++;
-                        game->players[i].blocked = block_player(game,i);// Bloquear al jugador si no hay movimientos válidos
+                        game->players[index].invalid_moves++;
+                        game->players[index].blocked = block_player(game,index);// Bloquear al jugador si no hay movimientos válidos
                     }
                 }
                 sem_post(&sems->game_state_mutex);
             }
         }
         
+        start = ((start+1)%num_players);
+
         // sem_post(&sems->game_state_mutex);
         // Respetar el delay configurado
         if(view_path!=NULL){
