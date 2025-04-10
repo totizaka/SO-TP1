@@ -304,7 +304,7 @@ void print_game_ending(GameMap *game, int num_players){
 
     // Imprimir resumen de cada jugador
     for (int i = 0; i < num_players; i++) {
-        printf("Jugador %d (%s): %u puntos / %d mov invalidos / %d mov validos\n", i, game->players[i].player_name, game->players[i].points, game->players[i].invalid_moves, game->players[i].valid_moves);
+        printf("Jugador %d (%s): %u puntos / %u mov invalidos / %u mov validos\n", i, game->players[i].player_name, game->players[i].points, game->players[i].invalid_moves, game->players[i].valid_moves);
         
         if (game->players[i].points > max_points) {
             max_points = game->players[i].points;
@@ -336,7 +336,7 @@ void print_game_ending(GameMap *game, int num_players){
     if (tie && max_points > 0) {
         printf("\n¡Hay un empate entre jugadores con %u puntos y mismos criterios de desempate!\n", max_points);
     } else if (winner_index != -1) {
-        printf("\n¡El ganador es el Jugador %d!!! (%s) con %u puntos / %d movimientos invalidos / %d movimientos validos\n",
+        printf("\n¡El ganador es el Jugador %d!!! (%s) con %u puntos / %u movimientos invalidos / %u movimientos validos\n",
                winner_index,
                game->players[winner_index].player_name,
                max_points,

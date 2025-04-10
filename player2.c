@@ -195,7 +195,7 @@ int main(int argc, char const *argv[])
                 }
             }
         }
-        else if (hasMove == 0 && state_invalid_moves > invalid_moves){
+        else if (state_invalid_moves > invalid_moves){
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
                 if (pfd.revents & POLLOUT) {
                     if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
@@ -203,7 +203,6 @@ int main(int argc, char const *argv[])
                         break;
                     }
                     invalid_moves = state_invalid_moves;
-                    hasMove = 0;
                 }
             }
         }
