@@ -126,9 +126,9 @@ int main(int argc, char *argv[]) {
                         start_time = time(NULL); // Reiniciar timeout
                     } else {
                         game->players[index].invalid_moves++;
-                        // Bloquear al jugador si no hay movimientos válidos
-                        game->players[index].blocked = block_player(game,index);
                     }
+                    // Bloquear al jugador si no hay movimientos válidos
+                    game->players[index].blocked = block_player(game,index);
                 }
                 sem_post(&sems->game_state_mutex);
             }
