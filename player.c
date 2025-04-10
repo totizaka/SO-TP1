@@ -92,6 +92,7 @@ int main(int argc, char const *argv[])
                 break;
             }
         }
+        
     
         if (player_index == -1) {
             fprintf(stderr, "Error: No se encontró el jugador con PID %d en la lista de jugadores.\n", pid);

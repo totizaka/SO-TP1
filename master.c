@@ -34,10 +34,6 @@ void print_usage(const char *prog_name) {
     exit(EXIT_FAILURE);
 }
 
-
-
-
-
 int validate_move(GameMap *game, int player_index, unsigned char move) {
 
     Player *player = &game->players[player_index];
@@ -51,15 +47,11 @@ int validate_move(GameMap *game, int player_index, unsigned char move) {
 
     // Verificar si la celda está ocupada
     int cell_value = game->board[new_y * game->width + new_x];
-    if (cell_value > 0 && cell_value <10) {
-        return 1; // Celda valida
-    }
 
-    return 0; // Celda
+    return (cell_value > 0 && cell_value <10) ;
 }
 
 void apply_move(GameMap *game, int player_index, unsigned char move) {
-
     Player *player = &game->players[player_index];
     int new_x = player->x + dx[move];
     int new_y = player->y + dy[move];
@@ -69,19 +61,13 @@ void apply_move(GameMap *game, int player_index, unsigned char move) {
 
     // Capturar la celda
     int reward = game->board[new_y * game->width + new_x];
-    if(cabeza*player_index == 0){
-        game->board[new_y * game->width + new_x] = 11; // Marcar la celda como ocupada por el jugador
-    }
-    else{
-        game->board[new_y * game->width + new_x] = cabeza*player_index; // Poner la cabeza del jugador en la nueva celda
-    }
+    game->board[new_y * game->width + new_x] = (cabeza * player_index == 0) ? 11 : cabeza * player_index;
 
     // Actualizar el puntaje y la posición del jugador
     player->points += reward;
     player->x = new_x;
     player->y = new_y;
     player->valid_moves++;
-
 }
 
 pid_t create_player(int * player_pipe, char* player_path, int width, int height){
@@ -98,8 +84,7 @@ pid_t create_player(int * player_pipe, char* player_path, int width, int height)
             perror("Error ejecutando el jugador");
             exit(EXIT_FAILURE);
         }
-        close(player_pipe[1]); // Cerrar extremo de escritura en el máster
-
+    close(player_pipe[1]); // Cerrar extremo de escritura en el máster
     return pid;
 }
 
@@ -110,8 +95,6 @@ bool block_player(GameMap* game, int player_num){
         }
     }
     return true;
-
-
 }
     
 void parse_arguments(int argc, char *argv[], unsigned int *delay, unsigned int *timeout, unsigned int *seed,
@@ -149,15 +132,14 @@ void parse_arguments(int argc, char *argv[], unsigned int *delay, unsigned int *
             exit(EXIT_FAILURE);
         }
     }
-
     if (*num_players == 0) {
         fprintf(stderr, "Error: Debe especificar al menos un jugador con -p.\n");
         print_usage(argv[0]);
         exit(EXIT_FAILURE);
     }
 }
-void print_game_ending(GameMap *game, int num_players){
 
+void print_game_ending(GameMap *game, int num_players){
     // Imprimir resumen final del juego
     printf("\n=== Resumen del juego ===\n\n");
 
@@ -168,6 +150,7 @@ void print_game_ending(GameMap *game, int num_players){
     // Imprimir resumen de cada jugador
     for (int i = 0; i < num_players; i++) {
         printf("Jugador %d (%s): %u puntos / %d mov invalidos / %d mov validos\n", i, game->players[i].player_name, game->players[i].points, game->players[i].invalid_moves, game->players[i].valid_moves);
+        
         if (game->players[i].points > max_points) {
             max_points = game->players[i].points;
             winner_index = i;
@@ -246,7 +229,6 @@ void initialize_board(GameMap *game, int width, int height, unsigned int seed) {
     }
 }
 
-
 // Función para hacer shuffle de un array
 void shuffle(int *array, int n) {
     for (int i = n - 1; i > 0; i--) {
@@ -256,7 +238,6 @@ void shuffle(int *array, int n) {
         array[j] = temp;
     }
 }
-
 
 void distribute_players(GameMap *game, char *player_paths[], int num_players, int width, int height) {
     // Inicializar la semilla para rand una sola vez
@@ -363,12 +344,12 @@ void create_player_processes(GameMap *game, Semaphores *sems, int shm_state, int
         game->players[i].pid = player_pid;
     }
 }
+
 bool check_timeout(time_t start_time, int timeout, GameMap *game, Semaphores *sems){
     if (time(NULL) - start_time > timeout) {
         return true;
     }
     return false;
-
 }
 
 
@@ -539,7 +520,6 @@ int main(int argc, char *argv[]) {
         if(view_path!=NULL){
             usleep(delay * 500);
         }
-
     }
 
     // Esperar a que la view termine
