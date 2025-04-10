@@ -32,8 +32,7 @@ int next_movement(GameMap *game, Player *player, unsigned short width, unsigned 
         int value = game->board[new_y * width + new_x];
 
         // Evitar moverse a una celda bloqueada
-        if (value < -9) continue;
-        if (value > 0 && value <10) {
+        if (value > 0 && value < 10) {
             if (value > max_value) {
                 max_value = value;
                 best_move = dir;
@@ -68,31 +67,31 @@ int main(int argc, char const *argv[])
     unsigned short width = atoi(argv[1]);
     unsigned short height = atoi(argv[2]);
 
-    // Calcular el tamaño total de la memoria compartida
+    //Calcular el tamaño total de la memoria compartida
     size_t shm_size = sizeof(GameMap) + (width * height * sizeof(int));
 
     // Abrir la memoria compartida (sin O_CREAT porque ya esta creada)
- 
-    
     int shm_state= shm_handler(SHM_NAME_STATE, O_RDONLY, 0666, "shm_state", 0, NULL);
     int shm_sync= shm_handler(SHM_NAME_SYNC, O_RDWR, 0666, "shm_sync",0, NULL);
 
     // Mapear la memoria compartida
-
     GameMap *game = shm_map(shm_state, shm_size, PROT_READ, "shm_state");
     Semaphores *sems = shm_map(shm_sync, sizeof(Semaphores), PROT_READ | PROT_WRITE, "shm_sync");
 
+    // Booleano para identificar si es el primer movimiento
+    bool firstMovement = 1;
 
-    int sendMovements = 0;
+    // Booleano para ver si el jugador se movió
+    bool hasMove = 0;
 
+    // Para ver si no se movió debido a un movimiento invalido
     int invalid_moves=0;
 
+    // Coordenadas para chequear si se movio
     int player_x = 0;
     int player_y = 0;
 
-    int hasMove = 0;
 
-    
     struct pollfd pfd;
     pfd.fd = STDOUT_FILENO;
     pfd.events = POLLOUT; // Esperar a que el pipe esté listo para escribir
@@ -153,14 +152,15 @@ int main(int argc, char const *argv[])
             break;
         }
 
-        if (sendMovements == 0){
-            // Guardar la posición inicial del jugador
+        // Guardar la posición inicial del jugador y marcar que se ha movido por ser la primer posicion
+        if (firstMovement){
+            firstMovement=0;
+            hasMove=1;
             player_x = player->x;
             player_y = player->y;
         }
-
+        // El jugador se ha movido, actualizar las coordenadas
         if (player->x != player_x || player->y != player_y) {
-            // El jugador se ha movido, actualizar las coordenadas
             hasMove = 1;
             player_x = player->x;
             player_y = player->y;
@@ -184,14 +184,13 @@ int main(int argc, char const *argv[])
 
         //Enviar movimiento
 
-        if ((hasMove == 0 && sendMovements == 0) || (hasMove == 1)) {
+        if ((hasMove == 1)) {
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
                 if (pfd.revents & POLLOUT) {
                     if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
                         perror("Error al escribir en el pipe");
                         break;
                     }
-                    sendMovements+=1;
                     hasMove = 0;
                 }
             }
@@ -203,7 +202,6 @@ int main(int argc, char const *argv[])
                         perror("Error al escribir en el pipe");
                         break;
                     }
-                    sendMovements+=1;
                     invalid_moves = state_invalid_moves;
                     hasMove = 0;
                 }
@@ -212,7 +210,6 @@ int main(int argc, char const *argv[])
     }
     
     // Liberar recursos
-
     shm_closer(game, shm_size, sems, shm_state, shm_sync, 0);
 
     return 0;

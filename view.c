@@ -57,40 +57,75 @@ const char *player_tail_colors[] = {
 #define RESET_COLOR "\033[0m"
 
 
-void print_game_board(GameMap *game, int width, int height, const char *player_colors[]) {
-            
-    printf("\nTablero:\n");
+void print_player_state(GameMap *game) {
+    printf("\033[3J\033[H\033[2J");  // Limpia pantalla y scrollback
+    fflush(stdout);
+
+    // Imprimir estado
+    printf("\nTablero de %dx%d\n", game->width, game->height);
+    printf("Jugadores: %u\n", game->num_players);
+
+    for (int i = 0; i < game->num_players; i++) {
+        printf("%sJugador %2d:%s %-15s - Puntos: %3u - Posición: (%2hu, %2hu)\t", 
+            letters_colors[i], i, RESET_COLOR,
+            game->players[i].player_name,
+            game->players[i].points,
+            game->players[i].x, game->players[i].y);
+
+        printf("\tJugador %d %s\n", i, game->players[i].blocked ? "está bloqueado." : "no está bloqueado.");
+    }
+    printf("\n");
+}
+
+
+void print_game_board(GameMap *game, int width, int height, const char *player_colors[], const Player *players, int num_players) {
+
+    printf("Tablero:\n");
     for (int x = 0; x < width; x++) {
         printf("---");
     }
     printf("\n");
+
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             int cell = game->board[y * width + x];
-            if (cell < 0) {
-                // Celda capturada por un jugador
+    
+            // Veo si es la cabeza
+            int is_head = 0;
+            for (int p = 0; p < num_players; p++) {
+                if (players[p].x == x && players[p].y == y) {
+                    printf("|%s  %s", player_colors[p], RESET_COLOR);
+                    is_head = 1;
+                    break;
+                }
+            }
+    
+            if (is_head) continue;
+    
+            // Celda capturada 
+            else if (cell <= 0) {
                 int player_id = -cell;
-                printf("|%s  %s", player_tail_colors[player_id % 9], RESET_COLOR); // Fondo de color
-            } else if (cell == 0) {
-                printf("|%s  %s", player_tail_colors[0], RESET_COLOR);
-            } else if (cell == 11) {
-                printf("|%s  %s", player_colors[0], RESET_COLOR);
-            } else if (cell % 10 == 0) {
-                int player_id = cell / 10;
-                printf("|%s  %s", player_colors[player_id % 9], RESET_COLOR);
-            } else {
+                printf("|%s  %s", player_tail_colors[player_id], RESET_COLOR);
+            }
+            // Puntaje común
+            else {
                 printf("|%2d", cell);
             }
         }
+    
         printf("|\n");
         for (int x = 0; x < width; x++) {
             printf("---");
         }
         printf("\n");
-        
     }
 }
 
+
+void clear_terminal() {
+    printf("\033[3J\033[H\033[2J");
+    fflush(stdout);
+}
 
 
 
@@ -121,25 +156,15 @@ int main(int argc, char const *argv[])
         //Esperamos
         sem_wait(&sems->view_pending);
 
-        //IMPRESION
+        clear_terminal();
         
-        // Imprimir estado
-        printf("\nTablero de %dx%d\n", game->width, game->height);
-        printf("Jugadores: %u\n", game->num_players);
-        
-        for (int i = 0; i < game->num_players; i++) {
-            printf("%sJugador %2d:%s %-15s - Puntos: %3u - Posición: (%2hu, %2hu)\t", 
-                letters_colors[i % 9], i, RESET_COLOR,
-                game->players[i].player_name,
-                game->players[i].points,
-                game->players[i].x, game->players[i].y);
-        
-            printf("\tJugador %d %s\n", i, game->players[i].blocked ? "está bloqueado." : "no está bloqueado.");
-        }
+        // Imprimir estado de los jugadores
+        print_player_state(game);
 
+        Player* players = game->players;
     
         // Imprimir Tablero
-        print_game_board(game, width, height, player_head_colors);        
+        print_game_board(game, width, height, player_head_colors, players, game->num_players);        
         //Seguimos
         sem_post(&sems->view_done);
         }

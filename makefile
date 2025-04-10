@@ -4,9 +4,11 @@ CFLAGS = -Wall -g -fsanitize=address
 
 # Archivos objeto comunes
 OBJ_GAME = game_structs.o
+OBJ_MASTER_FUNCS = master_functions.o
 
 # Archivos fuente
 SRC_MASTER = master.c
+SRC_MASTER_FUNCS = master_functions.c
 SRC_PLAYER = player.c
 SRC_PLAYER2 = player2.c
 SRC_VIEW = view.c
@@ -28,12 +30,15 @@ EXE_VIEW = view
 
 all: $(EXE_MASTER) $(EXE_PLAYER) $(EXE_PLAYER2) $(EXE_VIEW)
 
-# Compilar game_structs.c
+# Compilar archivos comunes
 $(OBJ_GAME): game_structs.c game_structs.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
+$(OBJ_MASTER_FUNCS): $(SRC_MASTER_FUNCS) master_functions.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
 # Compilar y generar objetos
-$(OBJ_MASTER): $(SRC_MASTER) game_structs.h
+$(OBJ_MASTER): $(SRC_MASTER) game_structs.h master_functions.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OBJ_PLAYER): $(SRC_PLAYER) game_structs.h
@@ -46,7 +51,7 @@ $(OBJ_VIEW): $(SRC_VIEW) game_structs.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Enlazar ejecutables
-$(EXE_MASTER): $(OBJ_MASTER) $(OBJ_GAME)
+$(EXE_MASTER): $(OBJ_MASTER) $(OBJ_MASTER_FUNCS) $(OBJ_GAME)
 	$(CC) $(CFLAGS) $^ -o $@
 
 $(EXE_PLAYER): $(OBJ_PLAYER) $(OBJ_GAME)
@@ -68,5 +73,4 @@ run: all
 
 # Limpiar todo
 clean:
-	rm -f *.o $(EXE_MASTER) $(EXE_PLAYER) $(EXE_PLAYER2) $(EXE_VIEW) 
-
+	rm -f *.o $(EXE_MASTER) $(EXE_PLAYER) $(EXE_PLAYER2) $(EXE_VIEW)

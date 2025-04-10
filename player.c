@@ -36,7 +36,6 @@ int main(int argc, char const *argv[])
 
     // Abrir la memoria compartida (sin O_CREAT porque ya esta creada)
  
-    
     int shm_state= shm_handler(SHM_NAME_STATE, O_RDONLY, 0666, "shm_state", 0, NULL);
     int shm_sync= shm_handler(SHM_NAME_SYNC, O_RDWR, 0666, "shm_sync",0, NULL);
 
@@ -47,7 +46,6 @@ int main(int argc, char const *argv[])
 
     int valid_moves = 0;
     int invalid_moves = 0;
-
     int sendMovement = 0;
 
     // Para el write del jugador
@@ -120,6 +118,7 @@ int main(int argc, char const *argv[])
             break;
         }
 
+        // Verificar si el movimiento fue enviado
         if (player->invalid_moves > invalid_moves){
             invalid_moves = player->invalid_moves;
             sendMovement = 1;
@@ -128,7 +127,13 @@ int main(int argc, char const *argv[])
             valid_moves = player->valid_moves;
             sendMovement = 1;
         }
+        //Primer movimiento
+        if (valid_moves == 0 && invalid_moves == 0){
+            sendMovement = 1;
+        }
         
+        
+        //Decidir el siguiente movimiento
         unsigned char movement = rand() % 8;
 
 
@@ -139,24 +144,10 @@ int main(int argc, char const *argv[])
         sems->players_reading-=1;
         sem_post(&sems->game_player_mutex);
 
-        //Decidir el siguiente movimiento
-        
-        
         
         // Enviar el movimiento al máster
 
-        if (sendMovement == 0 && valid_moves == 0 && invalid_moves == 0) {
-            if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
-                if (pfd.revents & POLLOUT) {
-                    if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
-                        perror("Error al escribir en el pipe");
-                        break;
-                    }
-                    sendMovement = 0;
-                }
-            }
-        }
-        else if (sendMovement == 1) {
+        if (sendMovement == 1) {
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
                 if (pfd.revents & POLLOUT) {
                     if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
@@ -169,7 +160,6 @@ int main(int argc, char const *argv[])
         }
     }
     
-
     // Liberar recursos
 
     shm_closer(game, shm_size, sems, shm_state, shm_sync,0);
