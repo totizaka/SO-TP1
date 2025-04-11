@@ -1,0 +1,9 @@
+pvs-studio.com/en/docs/warnings/	1	err	Help: The documentation for all analyzer warnings is available here: https://pvs-studio.com/en/docs/warnings/.
+/root/master_functions.c	58	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
+/root/master_functions.c	61	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
+/root/player.c	37	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
+/root/player.c	38	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
+/root/player2.c	72	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
+/root/player2.c	73	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
+/root/view.c	145	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
+/root/view.c	146	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.

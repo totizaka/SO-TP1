@@ -1,7 +1,7 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "game_structs.h"
 #include <stdio.h>
-
-
 
 // Desplazamientos para las 8 direcciones posibles
 const int dx[] = {0, 1, 1, 1, 0, -1, -1, -1};

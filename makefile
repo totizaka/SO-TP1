@@ -1,6 +1,6 @@
 # Compilador y flags
 CC = gcc
-CFLAGS = -Wall -g -fsanitize=address
+CFLAGS = -Wall -g
 
 # Archivos objeto comunes
 OBJ_GAME = game_structs.o

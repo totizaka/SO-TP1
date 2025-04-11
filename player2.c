@@ -1,7 +1,5 @@
 // This is a personal academic project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-// This is a personal academic project. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -91,14 +89,21 @@ int main(int argc, char const *argv[])
     int player_x = 0;
     int player_y = 0;
 
+    bool error=false;
 
     struct pollfd pfd;
     pfd.fd = STDOUT_FILENO;
     pfd.events = POLLOUT; // Esperar a que el pipe esté listo para escribir
 
+    // Determinar el índice del jugador basado en su PID
+    int player_index=get_player_index(game);
+    if (player_index== -1) {
+        fprintf(stderr, "Error: No se encontró el jugador con PID %d en la lista de jugadores.\n", pid);
+        error=true;
+    }
 
      // Bucle principal del jugador
-     while (1) {
+     while (!error) {
 
         sem_wait(&sems->master_mutex);
         sem_post(&sems->master_mutex);
@@ -111,29 +116,13 @@ int main(int argc, char const *argv[])
         sem_post(&sems->game_player_mutex);
 
         //Consultar estado
-
         // Verificar si el juego terminó
         if (game->game_over) {
             
             sem_wait(&sems->game_player_mutex);
-            if (sems->players_reading == 1){
+            if (sems->players_reading-- == 1){
                 sem_post(&sems->game_state_mutex);
             }
-            sems->players_reading-=1;
-            sem_post(&sems->game_player_mutex);
-            break;
-        }
-    
-        // Determinar el índice del jugador basado en su PID
-        int player_index=get_player_index(game);
-        if (player_index== -1) {
-            fprintf(stderr, "Error: No se encontró el jugador con PID %d en la lista de jugadores.\n", pid);
-
-            sem_wait(&sems->game_player_mutex);
-            if (sems->players_reading == 1){
-                sem_post(&sems->game_state_mutex);
-            }
-            sems->players_reading-=1;
             sem_post(&sems->game_player_mutex);
             break;
         }
@@ -144,10 +133,9 @@ int main(int argc, char const *argv[])
         // Verificar si el jugador está bloqueado
         if (player->blocked){
             sem_wait(&sems->game_player_mutex);
-            if (sems->players_reading == 1){
+            if (sems->players_reading-- == 1){
                 sem_post(&sems->game_state_mutex);
             }
-            sems->players_reading-=1;
             sem_post(&sems->game_player_mutex);
             break;
         }
@@ -169,16 +157,15 @@ int main(int argc, char const *argv[])
         int state_invalid_moves = player->invalid_moves;
         
         
-        //Decidir el siguiente movimiento
+        //Decidir el siguiente movimiento, se usa info del estado
         
         unsigned char movement = next_movement(game, player, width, height);
 
         
         sem_wait(&sems->game_player_mutex);
-        if (sems->players_reading == 1){
+        if (sems->players_reading-- == 1){
             sem_post(&sems->game_state_mutex);
         }
-        sems->players_reading-=1;
         sem_post(&sems->game_player_mutex);
 
 
@@ -193,6 +180,8 @@ int main(int argc, char const *argv[])
                     }
                     hasMove = 0;
                 }
+            }else{
+                perror("POLL FALLA\n");
             }
         }
         else if (state_invalid_moves > invalid_moves){
@@ -204,6 +193,8 @@ int main(int argc, char const *argv[])
                     }
                     invalid_moves = state_invalid_moves;
                 }
+            }else{
+                perror("POLL FALLO\n");
             }
         }
     }
