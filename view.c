@@ -83,7 +83,6 @@ void print_game_board(GameMap *game, int width, int height, const char *player_c
         printf("---");
     }
     printf("\n");
-
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             int cell = game->board[y * width + x];

@@ -154,7 +154,10 @@ int main(int argc, char const *argv[])
             player_y = player->y;
         }
 
-        int state_invalid_moves = player->invalid_moves;
+
+        // Guardamos los movimientos invalidos cuando leemos el estado
+        
+        int aux_invalid_moves = player->invalid_moves;
         
         
         //Decidir el siguiente movimiento, se usa info del estado
@@ -184,14 +187,14 @@ int main(int argc, char const *argv[])
                 perror("POLL FALLA\n");
             }
         }
-        else if (state_invalid_moves > invalid_moves){
+        else if (aux_invalid_moves > invalid_moves){
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
                 if (pfd.revents & POLLOUT) {
                     if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
                         perror("Error al escribir en el pipe");
                         break;
                     }
-                    invalid_moves = state_invalid_moves;
+                    invalid_moves = aux_invalid_moves;
                 }
             }else{
                 perror("POLL FALLO\n");

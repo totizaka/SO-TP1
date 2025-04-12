@@ -106,45 +106,28 @@ void shuffle(int *array, int n) {
 }
 
 void initialize_players(GameMap *game, char *player_paths[], int num_players, int width, int height) {
+    float cx = width / 2.0;
+    float cy = height / 2.0;
+    float a = width / 3.0;     // semieje horizontal 
+    float b = height / 3.0;    // semieje vertical   
 
-    // Grilla 3x3
-    int grid_positions[9][2] = {
-        {width / 6, height / 6},                        // 0
-        {width / 2, height / 6},                        // 1
-        {5 * width / 6, height / 6},                    // 2
-        {width / 6, height / 2},                        // 3
-        {width / 2, height / 2},                        // 4
-        {5 * width / 6, height / 2},                    // 5
-        {width / 6, 5 * height / 6},                    // 6
-        {width / 2, 5 * height / 6},                    // 7
-        {5 * width / 6, 5 * height / 6}                 // 8
-    };
-
-    // Índices para cada cantidad de jugadores
-    int index_sets[9][9] = {
-        {4},                                            // 1
-        {0, 8},                                         // 2
-        {0, 4, 8},                                      // 3
-        {0, 2, 6, 8},                                   // 4
-        {0, 2, 4, 6, 8},                                // 5
-        {0, 2, 3, 5, 6, 8},                             // 6
-        {0, 2, 4, 6, 7, 8, 1},                          // 7
-        {0, 1, 2, 3, 5, 6, 7, 8},                       // 8
-        {0, 1, 2, 3, 4, 5, 6, 7, 8}                     // 9
-    };
-
-    // Crear un array con el orden original de jugadores y mezclarlo
     int shuffled_indices[9];
     for (int i = 0; i < num_players; i++){
         shuffled_indices[i] = i;
     }
+
     shuffle(shuffled_indices, num_players);
 
     for (int i = 0; i < num_players; i++) {
         int player_idx = shuffled_indices[i];
-        int pos_idx = index_sets[num_players - 1][i];
-        int x = grid_positions[pos_idx][0];
-        int y = grid_positions[pos_idx][1];
+        float angle = 2 * M_PI * i / num_players;
+
+        int x = (int)(cx + a * cos(angle));
+        int y = (int)(cy + b * sin(angle));
+
+        // Asegurar que (x, y) está dentro del tablero
+        x = (x < 0) ? 0 : (x >= width) ? width - 1 : x;
+        y = (y < 0) ? 0 : (y >= height) ? height - 1 : y;
 
         game->players[player_idx].x = x;
         game->players[player_idx].y = y;
@@ -306,7 +289,7 @@ void print_game_ending(GameMap *game, int num_players){
 
     // Imprimir resumen de cada jugador
     for (int i = 0; i < num_players; i++) {
-        printf("Jugador %d (%s): %u puntos / %u mov invalidos / %u mov validos\n", i, game->players[i].player_name, game->players[i].points, game->players[i].invalid_moves, game->players[i].valid_moves);
+        printf("Jugador %2d (%-9s): %4u puntos / %3u mov inválidos / %3u mov válidos\n", i, game->players[i].player_name, game->players[i].points, game->players[i].invalid_moves, game->players[i].valid_moves);
         
         if (game->players[i].points > max_points) {
             max_points = game->players[i].points;

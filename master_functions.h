@@ -16,6 +16,9 @@
 #include <sys/select.h>
 #include <math.h>
 #include <time.h>
+#include <math.h>
+
+#define M_PI 3.14159265358979323846
 
 #define MAX_PLAYERS 9
 #define DEFAULT_WIDTH 10
@@ -79,4 +82,4 @@ void wait_for_process(pid_t pid, const char *desc);
 // Imprimir resumen del juego
 void print_game_ending(GameMap *game, int num_players);
 
-#endif // MASTER_H
+#endif

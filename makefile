@@ -66,22 +66,22 @@ $(OBJ_VIEW): $(SRC_VIEW) game_structs.h
 
 # Enlazar ejecutables
 $(EXE_MASTER): $(OBJ_MASTER) $(OBJ_MASTER_FUNCS) $(OBJ_GAME)
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@ -lm
 
 $(EXE_PLAYER): $(OBJ_PLAYER) $(OBJ_GAME)
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@ -lm
 
 $(EXE_PLAYER2): $(OBJ_PLAYER2) $(OBJ_GAME)
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@ -lm
 
 $(EXE_PLAYER3): $(OBJ_PLAYER3) $(OBJ_GAME)
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@ -lm
 
 $(EXE_PLAYER4): $(OBJ_PLAYER4) $(OBJ_GAME)
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@ -lm
 
 $(EXE_VIEW): $(OBJ_VIEW) $(OBJ_GAME)
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@ -lm
 
 # Correr el master con los jugadores
 run: all
