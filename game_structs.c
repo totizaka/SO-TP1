@@ -7,7 +7,6 @@
 const int dx[] = {0, 1, 1, 1, 0, -1, -1, -1};
 const int dy[] = {-1, -1, 0, 1, 1, 1, 0, -1};
 
-
 int shm_handler(char *name, int flag, mode_t mode,const char *desc, int auth_flag, const char *to_clean){
     int shm_segment = shm_open(name, flag, mode);
     if (shm_segment == -1) {
@@ -42,7 +41,6 @@ void shm_closer(Game_map *game, size_t game_size, Semaphores *sems, int shm_stat
     if (auth_flag){
         shm_unlink(SHM_NAME_STATE);
         shm_unlink(SHM_NAME_SYNC);
-
     }
 }
 

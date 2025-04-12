@@ -297,44 +297,39 @@ bool end_game(Game_map *game, Semaphores *sems, time_t start_time, unsigned int 
         post(&sems->view_pending);
         return true;
     }
- return false ;
+    return false ;
 }
 
+void movement_handler(Game_map *game, Semaphores *sems, fd_set *read_fds, int player_pipes[][2], int num_players, int *start_rr, time_t *start_time) {
+    for (int i = 0; i < num_players; i++) {
+        int index = (*start_rr + i) % num_players;
 
-void movement_handler(Game_map *game, Semaphores *sems, fd_set *read_fds, int player_pipes[][2], int num_players, int *start, time_t *start_time) {
-for (int i = 0; i < num_players; i++) {
-    int index = (*start + i) % num_players;
+        if (FD_ISSET(player_pipes[index][0], read_fds)) {
+            unsigned char move;
+            int bytes_read = read(player_pipes[index][0], &move, sizeof(move));
 
-    if (FD_ISSET(player_pipes[index][0], read_fds)) {
-        unsigned char move;
-        int bytes_read = read(player_pipes[index][0], &move, sizeof(move));
+            wait_sem(&sems->master_mutex); 
+            wait_sem(&sems->game_state_mutex);
+            post(&sems->master_mutex);
 
-        wait_sem(&sems->master_mutex); 
-        wait_sem(&sems->game_state_mutex);
-        post(&sems->master_mutex);
-
-        if (bytes_read == 0) {
-            game->players[index].blocked = true; 
-        } else if (bytes_read > 0) {
-            if (validate_move(game, index, move)) {
-                apply_move(game, index, move);
-                *start_time = time(NULL); // Reiniciar timeout
-            } else {
-                game->players[index].invalid_moves++;
+            if (bytes_read == 0) {
+                game->players[index].blocked = true; 
+            } else if (bytes_read > 0) {
+                if (validate_move(game, index, move)) {
+                    apply_move(game, index, move);
+                    *start_time = time(NULL); // Reiniciar timeout
+                } else {
+                    game->players[index].invalid_moves++;
+                }
+                game->players[index].blocked = block_player(game, index);
             }
-            game->players[index].blocked = block_player(game, index);
+
+            post(&sems->game_state_mutex);
         }
-
-        post(&sems->game_state_mutex);
     }
+
+    *start_rr = (*start_rr + 1) % num_players;
 }
-
-*start = (*start + 1) % num_players;
-}
-
-
-
-
 
 void wait_for_process(pid_t pid, const char *desc) {
     int status;
@@ -346,7 +341,7 @@ void wait_for_process(pid_t pid, const char *desc) {
     }
 }
 
-void wait_for_child_process(Game_map *game, int num_players) {
+void wait_for_players_processes(Game_map *game, int num_players) {
     for (int i = 0; i < num_players; i++) {
         char desc[64];
         snprintf(desc, sizeof(desc), "del jugador %d (%s)", i, game->players[i].player_name);

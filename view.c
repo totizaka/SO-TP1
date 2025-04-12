@@ -13,7 +13,6 @@
 #include <sys/stat.h>
 #include "game_structs.h"
 
-
 // Códigos ANSI para colores
 
 const char *letters_colors[] = {
@@ -56,10 +55,7 @@ const char *player_tail_colors[] = {
 
 
 void print_player_state(Game_map *game) {
-    printf("\033[3J\033[H\033[2J");  // Limpia pantalla y scrollback
-    fflush(stdout);
 
-    // Imprimir estado
     printf("\nTablero de %dx%d\n", game->width, game->height);
     printf("Jugadores: %u\n", game->num_players);
 
@@ -74,7 +70,6 @@ void print_player_state(Game_map *game) {
     }
     printf("\n");
 }
-
 
 void print_game_board(Game_map *game, int width, int height, const char *player_colors[], const Player *players, int num_players) {
 
@@ -118,13 +113,10 @@ void print_game_board(Game_map *game, int width, int height, const char *player_
     }
 }
 
-
 void clear_terminal() {
     printf("\033[3J\033[H\033[2J");
     fflush(stdout);
 }
-
-
 
 int main(int argc, char const *argv[])
 {
@@ -150,9 +142,10 @@ int main(int argc, char const *argv[])
     Semaphores *sems = shm_map(shm_sync, sizeof(Semaphores), PROT_READ | PROT_WRITE, "shm_sync");
 
     while(!game->game_over){
-        //Esperamos
+        // Esperamos al master
         wait_sem(&sems->view_pending);
 
+        // Limpiamos la terminal
         clear_terminal();
         
         // Imprimir estado de los jugadores
@@ -161,10 +154,11 @@ int main(int argc, char const *argv[])
         Player* players = game->players;
     
         // Imprimir Tablero
-        print_game_board(game, width, height, player_head_colors, players, game->num_players);        
-        //Seguimos
+        print_game_board(game, width, height, player_head_colors, players, game->num_players);
+
+        // Indicamos al master que ya se imprimio la vista
         post(&sems->view_done);
-        }
+    }
 
     shm_closer(game, shm_size, sems, shm_state, shm_sync,0);
 

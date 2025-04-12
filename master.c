@@ -32,18 +32,16 @@ int main(int argc, char *argv[]) {
     int player_pipes[MAX_PLAYERS][2];
     launch_player_processes(game, sems, shm_state, shm_sync, player_paths, num_players, width, height, player_pipes);
 
-    
     time_t start_time = time(NULL);
     fd_set read_fds;
 
     // Para el uso de round robin
-    int start = 0;
+    int start_rr = 0;
     
     // Bucle principal del máster
     while (!game->game_over) {
-        if(end_game(game, sems, start_time, timeout, num_players)){
-            break;
-        }
+
+        if(end_game(game, sems, start_time, timeout, num_players)) break;
         
         if(view_path != NULL){
             // Notificar a la vista que hay cambios
@@ -53,12 +51,10 @@ int main(int argc, char *argv[]) {
             wait_sem(&sems->view_done);
         }
         
-
         // Configurar los pipes para lectura 
         FD_ZERO(&read_fds);
         int max_fd = -1;
         set_reading_pipes(&read_fds, &max_fd, game, player_pipes, num_players);
-
 
         // Esperar solicitudes de movimientos
         struct timeval tv = {timeout, 0};
@@ -74,7 +70,8 @@ int main(int argc, char *argv[]) {
         }
         
         // Procesar movimientos
-        movement_handler(game, sems, &read_fds, player_pipes, num_players, &start, &start_time);
+        movement_handler(game, sems, &read_fds, player_pipes, num_players, &start_rr, &start_time);
+
         // Respetar el delay configurado si hay vista
         if(view_path!=NULL){
             usleep(delay * 1000);
@@ -86,19 +83,19 @@ int main(int argc, char *argv[]) {
         wait_for_process(view_pid, "de vista");
     }
 
-    // Esperar a que los procesos hijo terminen
-    wait_for_child_process(game , num_players);
+    // Esperar a que los jugadores terminen
+    wait_for_players_processes(game , num_players);
 
-
+    // Printar el resumen final del juego
     print_game_ending(game, num_players);
     
     // Liberar recursos
 
     // Cerrar pipes de los jugadores
     close_pipes(player_pipes, num_players);
+
     // Cerrar memoria compartida
     shm_closer(game,  sizeof(Game_map) + ( game->width * game->height * sizeof(int) ),sems,shm_state,shm_sync,1);
-
 
     return 0;
 }

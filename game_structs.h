@@ -15,15 +15,11 @@
 #include <string.h>
 #include <time.h>
 
-
 //Definiciones 
 #define SHM_NAME_STATE "/game_state"
 #define SHM_NAME_SYNC "/game_sync"
 
-
 //Estructuras 
-
-
 typedef struct {
     char player_name[16];   // Nombre del jugador
     unsigned int points;     // Puntaje
@@ -56,7 +52,6 @@ extern const int dx[8];  // Solo declaración
 extern const int dy[8];  // Solo declaración
 
 //Funciones de manejo de memoria compartida
-
 
 // shm_handler: Maneja la creación y apertura de memoria compartida
 int shm_handler(char *name, int flag, mode_t mode,const char *desc, int auth_flag, const char *to_clean);
