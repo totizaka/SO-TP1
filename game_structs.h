@@ -41,7 +41,7 @@ typedef struct {
     Player players[9];        // Lista de jugadores (máximo 9)
     bool game_over;           // Indica si el juego terminó
     int board[];              // Tablero (arreglo flexible al final)
-} GameMap;
+} Game_map;
 
 typedef struct {
     sem_t view_pending; // Se usa para indicarle a la vista que hay cambios por imprimir
@@ -65,7 +65,7 @@ int shm_handler(char *name, int flag, mode_t mode,const char *desc, int auth_fla
 void *shm_map(int fd, size_t size, int prot, const char *desc);
 
 // shm_closer: Cierra y libera la memoria compartida y los semáforos
-void shm_closer(GameMap *game, size_t game_size, Semaphores *sems, int shm_state, int shm_sync, int auth_flag);
+void shm_closer(Game_map *game, size_t game_size, Semaphores *sems, int shm_state, int shm_sync, int auth_flag);
 void wait_sem(sem_t* sem);
 void post(sem_t* sem);
 

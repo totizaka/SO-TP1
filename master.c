@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
     parse_arguments(argc, argv, &delay, &timeout, &seed, &view_path, player_paths, &num_players, &width, &height);
    
     // Crear memoria compartida para el estado del juego y los semáforos
-    GameMap *game;
+    Game_map *game;
     Semaphores *sems;
     int shm_state, shm_sync;
     create_shared_memory(width, height, &shm_state, &shm_sync, &game, &sems);
@@ -37,10 +37,10 @@ int main(int argc, char *argv[]) {
     // Inicializar y distribuir jugadores en el tablero                         
     initialize_players(game, player_paths, num_players, width, height);
 
-    pid_t viewPid;
+    pid_t view_pid;
     if(view_path != NULL){
         // Crear proceso para la vista
-        launch_view_process(view_path, width, height, &viewPid);
+        launch_view_process(view_path, width, height, &view_pid);
     }
 
     // Crear pipes y el proceso para cada jugador
@@ -143,7 +143,7 @@ int main(int argc, char *argv[]) {
 
     // Esperar a que la view termine
     if(view_path!=NULL){
-        wait_for_process(viewPid, "de vista");
+        wait_for_process(view_pid, "de vista");
     }
 
     // Esperar a que los procesos hijo terminen
@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
         close(player_pipes[i][1]); // Cerrar extremo de escritura del pipe
     }
     // Cerrar memoria compartida
-    shm_closer(game,  sizeof(GameMap) + ( game->width * game->height * sizeof(int) ),sems,shm_state,shm_sync,1);
+    shm_closer(game,  sizeof(Game_map) + ( game->width * game->height * sizeof(int) ),sems,shm_state,shm_sync,1);
 
 
     return 0;

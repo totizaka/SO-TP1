@@ -16,7 +16,7 @@
 #include <poll.h>
 #include "game_structs.h"
 
-int best_adjacent_move(GameMap *game, Player *player, unsigned short width, unsigned short height) {
+int best_adjacent_move(Game_map *game, Player *player, unsigned short width, unsigned short height) {
     unsigned char best_move = 0;
     int max_value = -1000000;
 
@@ -45,7 +45,7 @@ int best_adjacent_move(GameMap *game, Player *player, unsigned short width, unsi
     return best_move;
 }
 
-int get_player_index(GameMap* game){
+int get_player_index(Game_map* game){
     pid_t pid = getpid();
     for (int i = 0; i < game->num_players; i++) {
         if (game->players[i].pid == pid) {
@@ -68,12 +68,12 @@ int main(int argc, char const *argv[])
     unsigned short width = atoi(argv[1]);
     unsigned short height = atoi(argv[2]);
 
-    size_t shm_size = sizeof(GameMap) + (width * height * sizeof(int));
+    size_t shm_size = sizeof(Game_map) + (width * height * sizeof(int));
 
     int shm_state = shm_handler(SHM_NAME_STATE, O_RDONLY, 0666, "shm_state", 0, NULL);
     int shm_sync = shm_handler(SHM_NAME_SYNC, O_RDWR, 0666, "shm_sync", 0, NULL);
 
-    GameMap *game = shm_map(shm_state, shm_size, PROT_READ, "shm_state");
+    Game_map *game = shm_map(shm_state, shm_size, PROT_READ, "shm_state");
     Semaphores *sems = shm_map(shm_sync, sizeof(Semaphores), PROT_READ | PROT_WRITE, "shm_sync");
 
     int sendMovements = 0;

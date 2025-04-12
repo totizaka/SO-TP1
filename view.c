@@ -55,7 +55,7 @@ const char *player_tail_colors[] = {
 #define RESET_COLOR "\033[0m"
 
 
-void print_player_state(GameMap *game) {
+void print_player_state(Game_map *game) {
     printf("\033[3J\033[H\033[2J");  // Limpia pantalla y scrollback
     fflush(stdout);
 
@@ -76,7 +76,7 @@ void print_player_state(GameMap *game) {
 }
 
 
-void print_game_board(GameMap *game, int width, int height, const char *player_colors[], const Player *players, int num_players) {
+void print_game_board(Game_map *game, int width, int height, const char *player_colors[], const Player *players, int num_players) {
 
     printf("Tablero:\n");
     for (int x = 0; x < width; x++) {
@@ -138,7 +138,7 @@ int main(int argc, char const *argv[])
     unsigned short height = atoi(argv[2]);
 
     // Calcular el tamaño total de la memoria compartida
-    size_t shm_size = sizeof(GameMap) + (width * height * sizeof(int));
+    size_t shm_size = sizeof(Game_map) + (width * height * sizeof(int));
 
     // Abrir la memoria compartida (sin O_CREAT porque ya esta creada)
     
@@ -147,7 +147,7 @@ int main(int argc, char const *argv[])
 
     // Mapear la memoria compartida
 
-    GameMap *game = shm_map(shm_state, shm_size, PROT_READ, "shm_state");
+    Game_map *game = shm_map(shm_state, shm_size, PROT_READ, "shm_state");
     Semaphores *sems = shm_map(shm_sync, sizeof(Semaphores), PROT_READ | PROT_WRITE, "shm_sync");
 
     while(!game->game_over){

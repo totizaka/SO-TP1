@@ -32,7 +32,7 @@ void *shm_map(int fd, size_t size, int prot, const char *desc) {
     return mapped;
 }
 
-void shm_closer(GameMap *game, size_t game_size, Semaphores *sems, int shm_state, int shm_sync, int auth_flag) {
+void shm_closer(Game_map *game, size_t game_size, Semaphores *sems, int shm_state, int shm_sync, int auth_flag) {
     if (game) munmap(game, game_size);
     if (sems) munmap(sems, sizeof(Semaphores));
 

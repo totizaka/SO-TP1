@@ -16,7 +16,7 @@
 #include "game_structs.h"
 
 
-int next_movement(GameMap *game, Player *player, unsigned short width, unsigned short height) {
+int next_movement(Game_map *game, Player *player, unsigned short width, unsigned short height) {
     unsigned char best_move = 0;
     float best_score = -1000000;
 
@@ -56,7 +56,7 @@ int next_movement(GameMap *game, Player *player, unsigned short width, unsigned 
 }
 
 
-int get_player_index(GameMap* game){
+int get_player_index(Game_map* game){
     int player_index = -1;
         pid_t pid = getpid();
         for (int i = 0; i < game->num_players; i++) {
@@ -82,14 +82,14 @@ int main(int argc, char const *argv[])
     unsigned short height = atoi(argv[2]);
 
     //Calcular el tamaño total de la memoria compartida
-    size_t shm_size = sizeof(GameMap) + (width * height * sizeof(int));
+    size_t shm_size = sizeof(Game_map) + (width * height * sizeof(int));
 
     // Abrir la memoria compartida (sin O_CREAT porque ya esta creada)
     int shm_state= shm_handler(SHM_NAME_STATE, O_RDONLY, 0666, "shm_state", 0, NULL);
     int shm_sync= shm_handler(SHM_NAME_SYNC, O_RDWR, 0666, "shm_sync",0, NULL);
 
     // Mapear la memoria compartida
-    GameMap *game = shm_map(shm_state, shm_size, PROT_READ, "shm_state");
+    Game_map *game = shm_map(shm_state, shm_size, PROT_READ, "shm_state");
     Semaphores *sems = shm_map(shm_sync, sizeof(Semaphores), PROT_READ | PROT_WRITE, "shm_sync");
 
     // Booleano para identificar si es el primer movimiento
