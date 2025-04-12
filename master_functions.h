@@ -48,6 +48,20 @@ void initialize_players(Game_map *game, char *player_paths[], int num_players, i
 // Lanzar proceso de vista
 void launch_view_process(const char *view_path, int width, int height, pid_t *view_pid);
 
+
+
+void setup_game(int width, int height, unsigned int seed, int *shm_state, int *shm_sync, Game_map **game, Semaphores **sems, char *player_paths[], int num_players) ;
+
+
+void wait_for_child_process(Game_map *game, int num_players) ;
+
+void movement_handler(Game_map *game, Semaphores *sems, fd_set *read_fds, int player_pipes[][2], int num_players, int *start, time_t *start_time) ;
+
+bool end_game(Game_map *game, Semaphores *sems, time_t start_time, unsigned int timeout, int num_players);
+
+
+void close_pipes(int player_pipes[MAX_PLAYERS][2], int num_players) ;
+
 // Crear jugador
 pid_t create_player(int * player_pipe, char* player_path, int width, int height);
 

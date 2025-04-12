@@ -286,6 +286,73 @@ bool block_player(Game_map* game, int player_num){
     return true;
 }
     
+void setup_game(int width, int height, unsigned int seed, int *shm_state, int *shm_sync, Game_map **game, Semaphores **sems, char *player_paths[], int num_players) {
+    // Crear memoria compartida y semáforos
+    create_shared_memory(width, height, shm_state, shm_sync, game, sems);
+
+    // Inicializar estructura del juego
+    (*game)->width = width;
+    (*game)->height = height;
+    (*game)->num_players = num_players;
+    (*game)->game_over = false;
+
+    // Inicializar el tablero con números aleatorios
+    initialize_board(*game, width, height, seed);
+
+    // Inicializar semáforos
+    initialize_semaphores(*sems);
+
+    // Inicializar y ubicar a los jugadores
+    initialize_players(*game, player_paths, num_players, width, height);
+}
+
+bool end_game(Game_map *game, Semaphores *sems, time_t start_time, unsigned int timeout, int num_players){
+    // Verificar timeout
+    if (check_timeout(start_time, timeout)|| players_all_blocked(game, num_players)) {
+        game->game_over = true;
+        //Para que la vista termine
+        post(&sems->view_pending);
+        return true;
+    }
+ return false ;
+}
+
+
+void movement_handler(Game_map *game, Semaphores *sems, fd_set *read_fds, int player_pipes[][2], int num_players, int *start, time_t *start_time) {
+for (int i = 0; i < num_players; i++) {
+    int index = (*start + i) % num_players;
+
+    if (FD_ISSET(player_pipes[index][0], read_fds)) {
+        unsigned char move;
+        int bytes_read = read(player_pipes[index][0], &move, sizeof(move));
+
+        wait_sem(&sems->master_mutex); 
+        wait_sem(&sems->game_state_mutex);
+        post(&sems->master_mutex);
+
+        if (bytes_read == 0) {
+            game->players[index].blocked = true; 
+        } else if (bytes_read > 0) {
+            if (validate_move(game, index, move)) {
+                apply_move(game, index, move);
+                *start_time = time(NULL); // Reiniciar timeout
+            } else {
+                game->players[index].invalid_moves++;
+            }
+            game->players[index].blocked = block_player(game, index);
+        }
+
+        post(&sems->game_state_mutex);
+    }
+}
+
+*start = (*start + 1) % num_players;
+}
+
+
+
+
+
 void wait_for_process(pid_t pid, const char *desc) {
     int status;
     waitpid(pid, &status, 0);
@@ -293,6 +360,23 @@ void wait_for_process(pid_t pid, const char *desc) {
         printf("El proceso %s terminó con código de salida %d.\n", desc, WEXITSTATUS(status));
     } else {
         printf("El proceso %s no terminó correctamente.\n", desc);
+    }
+}
+
+void wait_for_child_process(Game_map *game, int num_players) {
+    for (int i = 0; i < num_players; i++) {
+        char desc[64];
+        snprintf(desc, sizeof(desc), "del jugador %d (%s)", i, game->players[i].player_name);
+        wait_for_process(game->players[i].pid, desc);
+    }
+}
+
+
+
+void close_pipes(int player_pipes[MAX_PLAYERS][2], int num_players) {
+    for (int i = 0; i < num_players; i++) {
+        close(player_pipes[i][0]); // lectura
+        close(player_pipes[i][1]); // Escritura
     }
 }
 

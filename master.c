@@ -20,22 +20,7 @@ int main(int argc, char *argv[]) {
     Game_map *game;
     Semaphores *sems;
     int shm_state, shm_sync;
-    create_shared_memory(width, height, &shm_state, &shm_sync, &game, &sems);
-
-    // Inicializar el estado del juego
-    game->width = width;
-    game->height = height;
-    game->num_players = num_players;
-    game->game_over = false;
-
-    // Inicializar el tablero con valores aleatorios entre 1 y 9
-    initialize_board(game, width, height, seed);
-   
-    // Inicializar semáforos
-    initialize_semaphores(sems);
-
-    // Inicializar y distribuir jugadores en el tablero                         
-    initialize_players(game, player_paths, num_players, width, height);
+    setup_game( width, height, seed, &shm_state, &shm_sync, &game, &sems, player_paths, num_players);
 
     pid_t view_pid;
     if(view_path != NULL){
@@ -52,25 +37,11 @@ int main(int argc, char *argv[]) {
     fd_set read_fds;
 
     // Para el uso de round robin
-    int index = 0;
     int start = 0;
     
     // Bucle principal del máster
     while (!game->game_over) {
-
-        // Verificar timeout
-        if (check_timeout(start_time, timeout)) {
-            game->game_over = true;
-            //Para que la vista termine
-            post(&sems->view_pending);
-            break;
-        }
-
-        // Verificar si estan todos los jugadores bloqueados
-        if (players_all_blocked(game, num_players)){
-            game->game_over = true;
-            //Para que la vista termine
-            post(&sems->view_pending);
+        if(end_game(game, sems, start_time, timeout, num_players)){
             break;
         }
         
@@ -103,38 +74,7 @@ int main(int argc, char *argv[]) {
         }
         
         // Procesar movimientos
-        for (int i = 0; i < num_players; i++) {
-
-            index = (start+i) % num_players;
-
-            if (FD_ISSET(player_pipes[index][0], &read_fds)) {
-                unsigned char move;
-                int bytes_read;
-                bytes_read = read(player_pipes[index][0], &move, sizeof(move));
-
-                wait_sem(&sems->master_mutex); 
-                wait_sem(&sems->game_state_mutex);
-                post(&sems->master_mutex);
-
-                if (bytes_read == 0) {                          //preguntar, creo q no es necesario!!
-                    // Jugador bloqueado (EOF)
-                    game->players[i].blocked = true; 
-                } else if (bytes_read > 0) {
-                    if (validate_move(game, index, move)) {
-                        apply_move(game, index, move);
-                        start_time = time(NULL); // Reiniciar timeout
-                    } else {
-                        game->players[index].invalid_moves++;
-                    }
-                    // Bloquear al jugador si no hay movimientos válidos
-                    game->players[index].blocked = block_player(game,index);
-                }
-                post(&sems->game_state_mutex);
-            }
-        }
-        
-        start = ((start+1) % num_players);
-
+        movement_handler(game, sems, &read_fds, player_pipes, num_players, &start, &start_time);
         // Respetar el delay configurado si hay vista
         if(view_path!=NULL){
             usleep(delay * 1000);
@@ -147,21 +87,15 @@ int main(int argc, char *argv[]) {
     }
 
     // Esperar a que los procesos hijo terminen
-    for (int i = 0; i < num_players; i++) {
-        char desc[64];
-        snprintf(desc, sizeof(desc), "del jugador %d (%s)", i, game->players[i].player_name);
-        wait_for_process(game->players[i].pid, desc);
-    }
+    wait_for_child_process(game , num_players);
+
 
     print_game_ending(game, num_players);
     
     // Liberar recursos
 
     // Cerrar pipes de los jugadores
-    for (int i = 0; i < num_players; i++) {
-        close(player_pipes[i][0]); // Cerrar extremo de lectura del pipe
-        close(player_pipes[i][1]); // Cerrar extremo de escritura del pipe
-    }
+    close_pipes(player_pipes, num_players);
     // Cerrar memoria compartida
     shm_closer(game,  sizeof(Game_map) + ( game->width * game->height * sizeof(int) ),sems,shm_state,shm_sync,1);
 
