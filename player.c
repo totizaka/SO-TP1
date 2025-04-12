@@ -30,7 +30,7 @@ int main(int argc, char const *argv[])
     unsigned short height = atoi(argv[2]);
 
     // Calcular el tamaño total de la memoria compartida
-    size_t shm_size = sizeof(GameMap) + (width * height * sizeof(int));
+    size_t shm_size = sizeof(Game_map) + (width * height * sizeof(int));
 
     // Abrir la memoria compartida (sin O_CREAT porque ya esta creada)
  
@@ -39,7 +39,7 @@ int main(int argc, char const *argv[])
 
     // Mapear la memoria compartida
 
-    GameMap *game = shm_map(shm_state, shm_size, PROT_READ, "shm_state");
+    Game_map *game = shm_map(shm_state, shm_size, PROT_READ, "shm_state");
     Semaphores *sems = shm_map(shm_sync, sizeof(Semaphores), PROT_READ | PROT_WRITE, "shm_sync");
 
     int valid_moves = 0;
@@ -51,9 +51,33 @@ int main(int argc, char const *argv[])
     pfd.fd = STDOUT_FILENO;
     pfd.events = POLLOUT; // Esperar a que el pipe esté listo para escribir
 
+    // Determinar el índice del jugador basado en su PID
+    int player_index = -1;
+    bool error=false;
+    for (int i = 0; i < game->num_players; i++) {
+        if (game->players[i].pid == pid) {
+            player_index = i;
+            break;
+        }
+    }
+    if (player_index == -1) {
+        fprintf(stderr, "Error: No se encontró el jugador con PID %d en la lista de jugadores.\n", pid);
 
+        wait_sem(&sems->game_player_mutex);
+        if (sems->players_reading == 1){
+            post(&sems->game_state_mutex);
+        }
+        sems->players_reading-=1;
+        post(&sems->game_player_mutex);
+        error=true;
+    }
+    Player *player;
+    if(!error){
+        // Obtener el jugador actual
+        player = &game->players[player_index];
+    }
      // Bucle principal del jugador
-     while (1) {
+     while (!error) {
 
         wait_sem(&sems->master_mutex);
         post(&sems->master_mutex);
@@ -79,31 +103,7 @@ int main(int argc, char const *argv[])
             break;
         }
     
-        // Determinar el índice del jugador basado en su PID
-        int player_index = -1;
-        pid_t pid = getpid();
-        for (int i = 0; i < game->num_players; i++) {
-            if (game->players[i].pid == pid) {
-                player_index = i;
-                break;
-            }
-        }
         
-    
-        if (player_index == -1) {
-            fprintf(stderr, "Error: No se encontró el jugador con PID %d en la lista de jugadores.\n", pid);
-
-            wait_sem(&sems->game_player_mutex);
-            if (sems->players_reading == 1){
-                post(&sems->game_state_mutex);
-            }
-            sems->players_reading-=1;
-            post(&sems->game_player_mutex);
-            break;
-        }
-    
-        // Obtener el jugador actual
-        Player *player = &game->players[player_index];
     
         // Verificar si el jugador está bloqueado
         if (player->blocked){

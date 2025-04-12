@@ -16,7 +16,7 @@
 #include "game_structs.h"
 
 
-int next_movement(GameMap *game, Player *player, unsigned short width, unsigned short height) {
+int next_movement(Game_map *game, Player *player, unsigned short width, unsigned short height) {
     unsigned char best_move = 0;
     int max_value = -1000000;
 
@@ -40,7 +40,7 @@ int next_movement(GameMap *game, Player *player, unsigned short width, unsigned 
     return best_move;
 }
 
-int get_player_index(GameMap* game){
+int get_player_index(Game_map* game){
     int player_index = -1;
         pid_t pid = getpid();
         for (int i = 0; i < game->num_players; i++) {
@@ -55,7 +55,7 @@ int get_player_index(GameMap* game){
 int main(int argc, char const *argv[])
 {
     pid_t pid = getpid();
-    srand(pid);                                         //Utilizamos el pid para inicializar la semilla
+    //srand(pid);                                       //Utilizamos el pid para inicializar la semilla
 
     if (argc != 3) {
         fprintf(stderr, "Uso: %s <width> <height>\n", argv[0]);
@@ -66,21 +66,21 @@ int main(int argc, char const *argv[])
     unsigned short height = atoi(argv[2]);
 
     //Calcular el tamaño total de la memoria compartida
-    size_t shm_size = sizeof(GameMap) + (width * height * sizeof(int));
+    size_t shm_size = sizeof(Game_map) + (width * height * sizeof(int));
 
     // Abrir la memoria compartida (sin O_CREAT porque ya esta creada)
     int shm_state= shm_handler(SHM_NAME_STATE, O_RDONLY, 0666, "shm_state", 0, NULL);
     int shm_sync= shm_handler(SHM_NAME_SYNC, O_RDWR, 0666, "shm_sync",0, NULL);
 
     // Mapear la memoria compartida
-    GameMap *game = shm_map(shm_state, shm_size, PROT_READ, "shm_state");
+    Game_map *game = shm_map(shm_state, shm_size, PROT_READ, "shm_state");
     Semaphores *sems = shm_map(shm_sync, sizeof(Semaphores), PROT_READ | PROT_WRITE, "shm_sync");
 
     // Booleano para identificar si es el primer movimiento
-    bool firstMovement = 1;
+    bool first_movement = 1;
 
     // Booleano para ver si el jugador se movió
-    bool hasMove = 0;
+    bool has_move = 0;
 
     // Para ver si no se movió debido a un movimiento invalido
     int invalid_moves=0;
@@ -97,10 +97,15 @@ int main(int argc, char const *argv[])
 
     // Determinar el índice del jugador basado en su PID
     int player_index=get_player_index(game);
+    Player *player;
     if (player_index== -1) {
         fprintf(stderr, "Error: No se encontró el jugador con PID %d en la lista de jugadores.\n", pid);
         error=true;
+    }else{
+        // Obtener el jugador actual
+        player = &game->players[player_index];
     }
+
 
      // Bucle principal del jugador
      while (!error) {
@@ -127,8 +132,6 @@ int main(int argc, char const *argv[])
             break;
         }
     
-        // Obtener el jugador actual
-        Player *player = &game->players[player_index];
     
         // Verificar si el jugador está bloqueado
         if (player->blocked){
@@ -141,15 +144,15 @@ int main(int argc, char const *argv[])
         }
 
         // Guardar la posición inicial del jugador y marcar que se ha movido por ser la primer posicion
-        if (firstMovement){
-            firstMovement=0;
-            hasMove=1;
+        if (first_movement){
+            first_movement=0;
+            has_move=1;
             player_x = player->x;
             player_y = player->y;
         }
         // El jugador se ha movido, actualizar las coordenadas
         if (player->x != player_x || player->y != player_y) {
-            hasMove = 1;
+            has_move = 1;
             player_x = player->x;
             player_y = player->y;
         }
@@ -159,11 +162,9 @@ int main(int argc, char const *argv[])
         
         int aux_invalid_moves = player->invalid_moves;
         
-        
         //Decidir el siguiente movimiento, se usa info del estado
         
         unsigned char movement = next_movement(game, player, width, height);
-
         
         wait_sem(&sems->game_player_mutex);
         if (sems->players_reading-- == 1){
@@ -171,17 +172,16 @@ int main(int argc, char const *argv[])
         }
         post(&sems->game_player_mutex);
 
-
         //Enviar movimiento
 
-        if ((hasMove == 1)) {
+        if ((has_move == 1)) {
             if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
                 if (pfd.revents & POLLOUT) {
                     if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
                         perror("Error al escribir en el pipe");
                         break;
                     }
-                    hasMove = 0;
+                    has_move = 0;
                 }
             }else{
                 perror("POLL FALLA\n");
