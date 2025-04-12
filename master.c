@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
         if (check_timeout(start_time, timeout)) {
             game->game_over = true;
             //Para que la vista termine
-            sem_post(&sems->view_pending);
+            post(&sems->view_pending);
             break;
         }
 
@@ -70,16 +70,16 @@ int main(int argc, char *argv[]) {
         if (players_all_blocked(game, num_players)){
             game->game_over = true;
             //Para que la vista termine
-            sem_post(&sems->view_pending);
+            post(&sems->view_pending);
             break;
         }
         
         if(view_path != NULL){
             // Notificar a la vista que hay cambios
-            sem_post(&sems->view_pending);
+            post(&sems->view_pending);
 
             // Esperar a que la vista termine de imprimir
-            sem_wait(&sems->view_done);
+            wait_sem(&sems->view_done);
         }
         
 
@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
         } else if (ready == 0) {
             // Timeout sin movimientos válidos
             game->game_over = true;
-            sem_post(&sems->view_pending);
+            post(&sems->view_pending);
             break;
         }
         
@@ -112,9 +112,9 @@ int main(int argc, char *argv[]) {
                 int bytes_read;
                 bytes_read = read(player_pipes[index][0], &move, sizeof(move));
 
-                sem_wait(&sems->master_mutex); 
-                sem_wait(&sems->game_state_mutex);
-                sem_post(&sems->master_mutex);
+                wait_sem(&sems->master_mutex); 
+                wait_sem(&sems->game_state_mutex);
+                post(&sems->master_mutex);
 
                 if (bytes_read == 0) {                          //preguntar, creo q no es necesario!!
                     // Jugador bloqueado (EOF)
@@ -129,7 +129,7 @@ int main(int argc, char *argv[]) {
                     // Bloquear al jugador si no hay movimientos válidos
                     game->players[index].blocked = block_player(game,index);
                 }
-                sem_post(&sems->game_state_mutex);
+                post(&sems->game_state_mutex);
             }
         }
         

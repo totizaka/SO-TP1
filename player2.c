@@ -105,25 +105,25 @@ int main(int argc, char const *argv[])
      // Bucle principal del jugador
      while (!error) {
 
-        sem_wait(&sems->master_mutex);
-        sem_post(&sems->master_mutex);
-        sem_wait(&sems->game_player_mutex);
+        wait_sem(&sems->master_mutex);
+        post(&sems->master_mutex);
+        wait_sem(&sems->game_player_mutex);
 
         if (sems->players_reading == 0){
-            sem_wait(&sems->game_state_mutex);
+            wait_sem(&sems->game_state_mutex);
         }
         sems->players_reading+=1;
-        sem_post(&sems->game_player_mutex);
+        post(&sems->game_player_mutex);
 
         //Consultar estado
         // Verificar si el juego terminó
         if (game->game_over) {
             
-            sem_wait(&sems->game_player_mutex);
+            wait_sem(&sems->game_player_mutex);
             if (sems->players_reading-- == 1){
-                sem_post(&sems->game_state_mutex);
+                post(&sems->game_state_mutex);
             }
-            sem_post(&sems->game_player_mutex);
+            post(&sems->game_player_mutex);
             break;
         }
     
@@ -132,11 +132,11 @@ int main(int argc, char const *argv[])
     
         // Verificar si el jugador está bloqueado
         if (player->blocked){
-            sem_wait(&sems->game_player_mutex);
+            wait_sem(&sems->game_player_mutex);
             if (sems->players_reading-- == 1){
-                sem_post(&sems->game_state_mutex);
+                post(&sems->game_state_mutex);
             }
-            sem_post(&sems->game_player_mutex);
+            post(&sems->game_player_mutex);
             break;
         }
 
@@ -162,11 +162,11 @@ int main(int argc, char const *argv[])
         unsigned char movement = next_movement(game, player, width, height);
 
         
-        sem_wait(&sems->game_player_mutex);
+        wait_sem(&sems->game_player_mutex);
         if (sems->players_reading-- == 1){
-            sem_post(&sems->game_state_mutex);
+            post(&sems->game_state_mutex);
         }
-        sem_post(&sems->game_player_mutex);
+        post(&sems->game_player_mutex);
 
 
         //Enviar movimiento

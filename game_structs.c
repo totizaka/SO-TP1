@@ -45,6 +45,13 @@ void shm_closer(GameMap *game, size_t game_size, Semaphores *sems, int shm_state
 
     }
 }
+
+void wait_sem(sem_t* sem){
+    sem_wait(sem);
+}
+void post(sem_t* sem){
+    sem_post(sem);
+}
     
 
 

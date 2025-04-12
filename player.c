@@ -55,27 +55,27 @@ int main(int argc, char const *argv[])
      // Bucle principal del jugador
      while (1) {
 
-        sem_wait(&sems->master_mutex);
-        sem_post(&sems->master_mutex);
-        sem_wait(&sems->game_player_mutex);
+        wait_sem(&sems->master_mutex);
+        post(&sems->master_mutex);
+        wait_sem(&sems->game_player_mutex);
 
         if (sems->players_reading == 0){
-            sem_wait(&sems->game_state_mutex);
+            wait_sem(&sems->game_state_mutex);
         }
         sems->players_reading+=1;
-        sem_post(&sems->game_player_mutex);
+        post(&sems->game_player_mutex);
 
         //Consultar estado
 
         // Verificar si el juego terminó
         if (game->game_over) {
             
-            sem_wait(&sems->game_player_mutex);
+            wait_sem(&sems->game_player_mutex);
             if (sems->players_reading == 1){
-                sem_post(&sems->game_state_mutex);
+                post(&sems->game_state_mutex);
             }
             sems->players_reading-=1;
-            sem_post(&sems->game_player_mutex);
+            post(&sems->game_player_mutex);
             break;
         }
     
@@ -93,12 +93,12 @@ int main(int argc, char const *argv[])
         if (player_index == -1) {
             fprintf(stderr, "Error: No se encontró el jugador con PID %d en la lista de jugadores.\n", pid);
 
-            sem_wait(&sems->game_player_mutex);
+            wait_sem(&sems->game_player_mutex);
             if (sems->players_reading == 1){
-                sem_post(&sems->game_state_mutex);
+                post(&sems->game_state_mutex);
             }
             sems->players_reading-=1;
-            sem_post(&sems->game_player_mutex);
+            post(&sems->game_player_mutex);
             break;
         }
     
@@ -107,12 +107,12 @@ int main(int argc, char const *argv[])
     
         // Verificar si el jugador está bloqueado
         if (player->blocked){
-            sem_wait(&sems->game_player_mutex);
+            wait_sem(&sems->game_player_mutex);
             if (sems->players_reading == 1){
-                sem_post(&sems->game_state_mutex);
+                post(&sems->game_state_mutex);
             }
             sems->players_reading-=1;
-            sem_post(&sems->game_player_mutex);
+            post(&sems->game_player_mutex);
             break;
         }
 
@@ -135,12 +135,12 @@ int main(int argc, char const *argv[])
         unsigned char movement = rand() % 8;
 
 
-        sem_wait(&sems->game_player_mutex);
+        wait_sem(&sems->game_player_mutex);
         if (sems->players_reading == 1){
-            sem_post(&sems->game_state_mutex);
+            post(&sems->game_state_mutex);
         }
         sems->players_reading-=1;
-        sem_post(&sems->game_player_mutex);
+        post(&sems->game_player_mutex);
 
         
         // Enviar el movimiento al máster

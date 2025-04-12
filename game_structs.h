@@ -66,6 +66,8 @@ void *shm_map(int fd, size_t size, int prot, const char *desc);
 
 // shm_closer: Cierra y libera la memoria compartida y los semáforos
 void shm_closer(GameMap *game, size_t game_size, Semaphores *sems, int shm_state, int shm_sync, int auth_flag);
+void wait_sem(sem_t* sem);
+void post(sem_t* sem);
 
 #endif
 

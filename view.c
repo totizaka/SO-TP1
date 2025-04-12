@@ -152,7 +152,7 @@ int main(int argc, char const *argv[])
 
     while(!game->game_over){
         //Esperamos
-        sem_wait(&sems->view_pending);
+        wait_sem(&sems->view_pending);
 
         clear_terminal();
         
@@ -164,7 +164,7 @@ int main(int argc, char const *argv[])
         // Imprimir Tablero
         print_game_board(game, width, height, player_head_colors, players, game->num_players);        
         //Seguimos
-        sem_post(&sems->view_done);
+        post(&sems->view_done);
         }
 
     shm_closer(game, shm_size, sems, shm_state, shm_sync,0);
