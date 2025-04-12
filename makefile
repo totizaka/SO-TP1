@@ -11,24 +11,31 @@ SRC_MASTER = master.c
 SRC_MASTER_FUNCS = master_functions.c
 SRC_PLAYER = player.c
 SRC_PLAYER2 = player2.c
+SRC_PLAYER3 = player3.c
+SRC_PLAYER4 = player4.c
 SRC_VIEW = view.c
 
 # Archivos objeto
 OBJ_MASTER = master.o
 OBJ_PLAYER = player.o
 OBJ_PLAYER2 = player2.o
+OBJ_PLAYER3 = player3.o
+OBJ_PLAYER4 = player4.o
+
 OBJ_VIEW = view.o
 
 # Ejecutables
 EXE_MASTER = master
 EXE_PLAYER = player
 EXE_PLAYER2 = player2
+EXE_PLAYER3 = player3
+EXE_PLAYER4 = player4
 EXE_VIEW = view
 
 # Targets principales
 .PHONY: all clean run
 
-all: $(EXE_MASTER) $(EXE_PLAYER) $(EXE_PLAYER2) $(EXE_VIEW)
+all: $(EXE_MASTER) $(EXE_PLAYER) $(EXE_PLAYER2) $(EXE_PLAYER3) $(EXE_PLAYER4) $(EXE_VIEW)
 
 # Compilar archivos comunes
 $(OBJ_GAME): game_structs.c game_structs.h
@@ -47,6 +54,13 @@ $(OBJ_PLAYER): $(SRC_PLAYER) game_structs.h
 $(OBJ_PLAYER2): $(SRC_PLAYER2) game_structs.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
+$(OBJ_PLAYER3): $(SRC_PLAYER3) game_structs.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJ_PLAYER4): $(SRC_PLAYER4) game_structs.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+
 $(OBJ_VIEW): $(SRC_VIEW) game_structs.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -58,6 +72,12 @@ $(EXE_PLAYER): $(OBJ_PLAYER) $(OBJ_GAME)
 	$(CC) $(CFLAGS) $^ -o $@
 
 $(EXE_PLAYER2): $(OBJ_PLAYER2) $(OBJ_GAME)
+	$(CC) $(CFLAGS) $^ -o $@
+
+$(EXE_PLAYER3): $(OBJ_PLAYER3) $(OBJ_GAME)
+	$(CC) $(CFLAGS) $^ -o $@
+
+$(EXE_PLAYER4): $(OBJ_PLAYER4) $(OBJ_GAME)
 	$(CC) $(CFLAGS) $^ -o $@
 
 $(EXE_VIEW): $(OBJ_VIEW) $(OBJ_GAME)
@@ -73,4 +93,4 @@ run: all
 
 # Limpiar todo
 clean:
-	rm -f *.o $(EXE_MASTER) $(EXE_PLAYER) $(EXE_PLAYER2) $(EXE_VIEW)
+	rm -f *.o $(EXE_MASTER) $(EXE_PLAYER) $(EXE_PLAYER2) $(EXE_PLAYER3) $(EXE_PLAYER4) $(EXE_VIEW)
