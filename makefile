@@ -9,10 +9,7 @@ OBJ_MASTER_FUNCS = master_functions.o
 # Archivos fuente
 SRC_MASTER = master.c
 SRC_MASTER_FUNCS = master_functions.c
-SRC_PLAYER = player.c
 SRC_PLAYER2 = player2.c
-SRC_PLAYER3 = player3.c
-SRC_PLAYER4 = player4.c
 SRC_VIEW = view.c
 
 # Archivos objeto
@@ -26,10 +23,7 @@ OBJ_VIEW = view.o
 
 # Ejecutables
 EXE_MASTER = master
-EXE_PLAYER = player
 EXE_PLAYER2 = player2
-EXE_PLAYER3 = player3
-EXE_PLAYER4 = player4
 EXE_VIEW = view
 
 # Targets principales
@@ -48,16 +42,8 @@ $(OBJ_MASTER_FUNCS): $(SRC_MASTER_FUNCS) master_functions.h
 $(OBJ_MASTER): $(SRC_MASTER) game_structs.h master_functions.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OBJ_PLAYER): $(SRC_PLAYER) game_structs.h
-	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OBJ_PLAYER2): $(SRC_PLAYER2) game_structs.h
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(OBJ_PLAYER3): $(SRC_PLAYER3) game_structs.h
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(OBJ_PLAYER4): $(SRC_PLAYER4) game_structs.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 
@@ -68,17 +54,11 @@ $(OBJ_VIEW): $(SRC_VIEW) game_structs.h
 $(EXE_MASTER): $(OBJ_MASTER) $(OBJ_MASTER_FUNCS) $(OBJ_GAME)
 	$(CC) $(CFLAGS) $^ -o $@ -lm
 
-$(EXE_PLAYER): $(OBJ_PLAYER) $(OBJ_GAME)
-	$(CC) $(CFLAGS) $^ -o $@ -lm
 
 $(EXE_PLAYER2): $(OBJ_PLAYER2) $(OBJ_GAME)
 	$(CC) $(CFLAGS) $^ -o $@ -lm
 
-$(EXE_PLAYER3): $(OBJ_PLAYER3) $(OBJ_GAME)
-	$(CC) $(CFLAGS) $^ -o $@ -lm
 
-$(EXE_PLAYER4): $(OBJ_PLAYER4) $(OBJ_GAME)
-	$(CC) $(CFLAGS) $^ -o $@ -lm
 
 $(EXE_VIEW): $(OBJ_VIEW) $(OBJ_GAME)
 	$(CC) $(CFLAGS) $^ -o $@ -lm

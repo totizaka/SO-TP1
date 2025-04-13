@@ -83,11 +83,11 @@ void print_game_board(Game_map *game, int width, int height, const char *player_
             int cell = game->board[y * width + x];
     
             // Veo si es la cabeza
-            int is_head = 0;
+            bool is_head = false;
             for (int p = 0; p < num_players; p++) {
                 if (players[p].x == x && players[p].y == y) {
                     printf("|%s  %s", player_colors[p], RESET_COLOR);
-                    is_head = 1;
+                    is_head = true;
                     break;
                 }
             }
