@@ -34,8 +34,8 @@ int main(int argc, char const *argv[])
 
     // Abrir la memoria compartida (sin O_CREAT porque ya esta creada)
  
-    int shm_state= shm_handler(SHM_NAME_STATE, O_RDONLY, 0666, "shm_state", 0, NULL);
-    int shm_sync= shm_handler(SHM_NAME_SYNC, O_RDWR, 0666, "shm_sync",0, NULL);
+    int shm_state= shm_handler(SHM_NAME_STATE, O_RDONLY, "shm_state", 0, NULL);
+    int shm_sync= shm_handler(SHM_NAME_SYNC, O_RDWR, "shm_sync",0, NULL);
 
     // Mapear la memoria compartida
 

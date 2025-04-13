@@ -1,9 +1,15 @@
 pvs-studio.com/en/docs/warnings/	1	err	Help: The documentation for all analyzer warnings is available here: https://pvs-studio.com/en/docs/warnings/.
 /root/master_functions.c	58	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
 /root/master_functions.c	61	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
+/root/player.c	77	warn	V557 Array underrun is possible. The value of 'player_index' index could reach -1.
 /root/player.c	37	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
 /root/player.c	38	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
-/root/player2.c	72	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
-/root/player2.c	73	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
-/root/view.c	145	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
-/root/view.c	146	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
+/root/player2.c	74	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
+/root/player2.c	75	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
+/root/player3.c	39	warn	V560 A part of conditional expression is always true: value <= 9.
+/root/player3.c	73	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
+/root/player3.c	74	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
+/root/player4.c	88	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
+/root/player4.c	89	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
+/root/view.c	136	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.
+/root/view.c	137	note	V536 Be advised that the utilized constant value is represented by an octal form. Oct: 0666, Dec: 438.

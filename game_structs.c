@@ -7,8 +7,8 @@
 const int dx[] = {0, 1, 1, 1, 0, -1, -1, -1};
 const int dy[] = {-1, -1, 0, 1, 1, 1, 0, -1};
 
-int shm_handler(char *name, int flag, mode_t mode,const char *desc, int auth_flag, const char *to_clean){
-    int shm_segment = shm_open(name, flag, mode);
+int shm_handler(char *name, int flag,const char *desc, int auth_flag, const char *to_clean){
+    int shm_segment = shm_open(name, flag, 0666);
     if (shm_segment == -1) {
         if (auth_flag){
             shm_unlink(to_clean);

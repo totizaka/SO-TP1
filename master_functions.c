@@ -55,10 +55,10 @@ void create_shared_memory(int width, int height, int *shm_state, int *shm_sync, 
     size_t shm_size = sizeof(Game_map) + (width * height * sizeof(int));
 
     // Crear memoria compartida para los semáforos
-    *shm_state = shm_handler(SHM_NAME_STATE, O_CREAT | O_RDWR, 0666, "shm_state", 0, NULL);
+    *shm_state = shm_handler(SHM_NAME_STATE, O_CREAT | O_RDWR, "shm_state", 0, NULL);
     ftruncate(*shm_state, shm_size);
 
-    *shm_sync  = shm_handler(SHM_NAME_SYNC,  O_CREAT | O_RDWR, 0666, "shm_sync", 1, SHM_NAME_STATE);
+    *shm_sync  = shm_handler(SHM_NAME_SYNC,  O_CREAT | O_RDWR, "shm_sync", 1, SHM_NAME_STATE);
     ftruncate(*shm_sync, sizeof(Semaphores));
 
     // Mapear memoria compartida
