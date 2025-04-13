@@ -12,7 +12,6 @@
 #include <time.h>
 #include <sys/types.h>
 #include <stdbool.h>
-#include <poll.h>
 #include "game_structs.h"
 
 
@@ -35,7 +34,11 @@ int next_movement(Game_map *game, Player *player, unsigned short width, unsigned
                 max_value = value;
                 best_move = dir;
             }
+        } 
+        if (max_value==9) {
+            break;
         }
+        
     }
     return best_move;
 }
@@ -55,7 +58,6 @@ int get_player_index(Game_map* game){
 int main(int argc, char const *argv[])
 {
     pid_t pid = getpid();
-    //srand(pid);                                       //Utilizamos el pid para inicializar la semilla
 
     if (argc != 3) {
         fprintf(stderr, "Uso: %s <width> <height>\n", argv[0]);
@@ -77,13 +79,13 @@ int main(int argc, char const *argv[])
     Semaphores *sems = shm_map(shm_sync, sizeof(Semaphores), PROT_READ | PROT_WRITE, "shm_sync");
 
     // Booleano para identificar si es el primer movimiento
-    bool first_movement = 1;
+    bool first_movement = true;
 
     // Booleano para ver si el jugador se movió
-    bool has_move = 0;
+    bool has_move = false;
 
     // Para ver si no se movió debido a un movimiento invalido
-    int invalid_moves=0;
+    int invalid_moves=false;
 
     // Coordenadas para chequear si se movio
     int player_x = 0;
@@ -91,9 +93,6 @@ int main(int argc, char const *argv[])
 
     bool error=false;
 
-    struct pollfd pfd;
-    pfd.fd = STDOUT_FILENO;
-    pfd.events = POLLOUT; // Esperar a que el pipe esté listo para escribir
 
     // Determinar el índice del jugador basado en su PID
     int player_index=get_player_index(game);
@@ -145,27 +144,25 @@ int main(int argc, char const *argv[])
 
         // Guardar la posición inicial del jugador y marcar que se ha movido por ser la primer posicion
         if (first_movement){
-            first_movement=0;
-            has_move=1;
+            first_movement=false;
+            has_move=true;
             player_x = player->x;
             player_y = player->y;
         }
         // El jugador se ha movido, actualizar las coordenadas
         if (player->x != player_x || player->y != player_y) {
-            has_move = 1;
+            has_move = true;
             player_x = player->x;
             player_y = player->y;
         }
-
 
         // Guardamos los movimientos invalidos cuando leemos el estado
         
         int aux_invalid_moves = player->invalid_moves;
         
         //Decidir el siguiente movimiento, se usa info del estado
-        
         unsigned char movement = next_movement(game, player, width, height);
-        
+
         wait_sem(&sems->game_player_mutex);
         if (sems->players_reading-- == 1){
             post(&sems->game_state_mutex);
@@ -174,31 +171,21 @@ int main(int argc, char const *argv[])
 
         //Enviar movimiento
 
-        if ((has_move == 1)) {
-            if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
-                if (pfd.revents & POLLOUT) {
-                    if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
-                        perror("Error al escribir en el pipe");
-                        break;
-                    }
-                    has_move = 0;
-                }
-            }else{
-                perror("POLL FALLA\n");
+        if (has_move) {  
+            if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
+                perror("Error al escribir en el pipe");
+                break;
             }
+            has_move = false;
+            
         }
         else if (aux_invalid_moves > invalid_moves){
-            if (poll(&pfd, 1, 0) > 0) {  // timeout 0 = no bloqueante
-                if (pfd.revents & POLLOUT) {
-                    if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
-                        perror("Error al escribir en el pipe");
-                        break;
-                    }
-                    invalid_moves = aux_invalid_moves;
-                }
-            }else{
-                perror("POLL FALLO\n");
+            if(write(STDOUT_FILENO, &movement, sizeof(movement)) == -1){
+                perror("Error al escribir en el pipe");
+                break;
             }
+            invalid_moves = aux_invalid_moves;
+            
         }
     }
     
