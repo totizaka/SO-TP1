@@ -9,27 +9,24 @@ OBJ_MASTER_FUNCS = master_functions.o
 # Archivos fuente
 SRC_MASTER = master.c
 SRC_MASTER_FUNCS = master_functions.c
-SRC_PLAYER2 = player2.c
+SRC_PLAYER = player.c
 SRC_VIEW = view.c
 
 # Archivos objeto
 OBJ_MASTER = master.o
 OBJ_PLAYER = player.o
-OBJ_PLAYER2 = player2.o
-OBJ_PLAYER3 = player3.o
-OBJ_PLAYER4 = player4.o
 
 OBJ_VIEW = view.o
 
 # Ejecutables
 EXE_MASTER = master
-EXE_PLAYER2 = player2
+EXE_PLAYER = player
 EXE_VIEW = view
 
 # Targets principales
 .PHONY: all clean run
 
-all: $(EXE_MASTER) $(EXE_PLAYER) $(EXE_PLAYER2) $(EXE_PLAYER3) $(EXE_PLAYER4) $(EXE_VIEW)
+all: $(EXE_MASTER) $(EXE_PLAYER) $(EXE_VIEW)
 
 # Compilar archivos comunes
 $(OBJ_GAME): game_structs.c game_structs.h
@@ -55,7 +52,7 @@ $(EXE_MASTER): $(OBJ_MASTER) $(OBJ_MASTER_FUNCS) $(OBJ_GAME)
 	$(CC) $(CFLAGS) $^ -o $@ -lm
 
 
-$(EXE_PLAYER2): $(OBJ_PLAYER2) $(OBJ_GAME)
+$(EXE_PLAYER): $(OBJ_PLAYER) $(OBJ_GAME)
 	$(CC) $(CFLAGS) $^ -o $@ -lm
 
 
@@ -73,4 +70,4 @@ run: all
 
 # Limpiar todo
 clean:
-	rm -f *.o $(EXE_MASTER) $(EXE_PLAYER) $(EXE_PLAYER2) $(EXE_PLAYER3) $(EXE_PLAYER4) $(EXE_VIEW)
+	rm -f *.o $(EXE_MASTER) $(EXE_PLAYER) $(EXE_VIEW)

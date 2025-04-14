@@ -4,9 +4,6 @@
 # Ejecutables (agregalos si querés ignorarlos también)
 master
 player
-player2
-player3
-player4
 view
 
 # Object files
